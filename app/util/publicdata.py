@@ -8,11 +8,14 @@ Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 __author__ = "Thomas J. Daley, J.D."
 __version__ = "0.0.1"
 
+import base64
 from datetime import datetime
 import os
 import requests
 import xml.etree.ElementTree as ET
+import xml
 
+from .database import Database
 from .logger import Logger
 
 
@@ -35,6 +38,9 @@ class PublicData(object):
         self.session_id = None
         self.id = None
 
+        self.database = None
+        self.connect_db()
+
         # Should be same as username, but who knows if PD might manipulate it in the future.
         # Here we save the version they reported back in the login response so that we can include it
         # in queries and searches we make.
@@ -44,14 +50,47 @@ class PublicData(object):
         self.search_server = None
         self.main_server = None
 
-    def load_xml(self, filename:str, url:str)->(bool, str, object):
+    def connect_db(self):
+        """
+        Connect to the datastore.
+
+        Args:
+            None.
+
+        Returns:
+            (bool): Whether connection as successful.
+        """
+
+        # If we've never connected, connect now.
+        if self.database is None:
+            database = Database()
+            success = database.connect()
+            if success:
+                self.database = database
+            return success
+
+        # See if existing connection is OK.
+        try:
+            self.database.test_connection()
+            success = True
+        except Exception as e:
+            self.logger.error("Error testing database connection: %s", e)
+            self.database = None
+            database = Database()
+            success = database.connect()
+
+        return success
+
+    def load_xml(self, url:str, refresh=False, filename:str=None)->(bool, str, object):
         """
         Load XML either from a cached file or a URL. If the cache file exists, we'll load from there.
         If the cache file does not exist, we'll load from the URL.
 
         Args:
-            filename (str): Name of the cache file to try to load.
             url (str): URL to load from if cache file does not exist.
+            refresh (bool): True to by-pass cached results and force a query to the server.
+            filename (str): Name of the cache file to try to load. If omitted (as it normally should be),
+                            cacheing is done through the database.
 
         Returns:
             (bool, str, object): The *bool* indicates success or failure.
@@ -60,23 +99,28 @@ class PublicData(object):
         """
         # See if the cache file exists. If so, it is not necessary
         # to query the URL - we will just parse the contents of the file.
-        # TODO: Force load from URL if XML parse fails.
         try:
-            if os.path.exists(filename):
-                self.logger.debug("Parsing previous response from earlier today: %s.", filename)
+            if filename and os.path.exists(filename) and not refresh:
+                self.logger.debug("Loading from file: %s", filename)
                 tree = ET.parse(filename)
-            else:
-                self.logger.debug("Load from URL.")
+                return (True, "OK", tree)
 
-                # Retrieve response from server
-                response = requests.get(url, allow_redirects=False)
+            if self.database and not refresh:
+                response = self.database.check_cache("PUBLICDATA", url)
+                if response:
+                    self.logger.debug("Loading from cache.")
+                    return (True, "OK", response)
 
-                # Convert response from stream of bytes to string
-                content = response.content.decode()
+            self.logger.debug("Loading from URL.")
 
-                # Save XML response
-                open(filename, "w").write(content)
-                tree = ET.fromstring(content)
+            # Retrieve response from server
+            response = requests.get(url, allow_redirects=False)
+
+            # Convert response from stream of bytes to string
+            content = response.content.decode()
+
+            # Deserialize response to XML element tree
+            tree = ET.ElementTree(ET.fromstring(content))
 
             # See if we got an error response.
             root = tree.getroot()
@@ -85,9 +129,22 @@ class PublicData(object):
                 return (False, message, tree)
 
             # All looks ok from a 30,000-foot level.
+            # Cache the response and return it to our caller.
+            if filename:
+                open(filename, "w").write(content)
+            elif self.database:
+                self.database.insert_cache(source="PUBLICDATA", query=url, result=tree)
+            else:
+                self.logger.warn("Unable to cache search result. Is the database down?")
+
             return (True, "OK", tree)
+        except xml.etree.ElementTree.ParseError as e:
+            self.logger.error("Error parsing XML: %s", e)
+            self.logger.error("Failed XML: %s", content)
+            return (False, str(e), None)
         except Exception as e:
-            self.logger.error("Error reading %s or loading from URL: %s", filename, e)
+            self.logger.error("Error reading cache or loading from URL: %s", e)
+            self.logger.error("Failed URL: %s", url)
             self.logger.exception(e)
             return (False, str(e), None)
 
@@ -111,7 +168,7 @@ class PublicData(object):
             # Format URL
             url = LOGIN_URL.format(username, password)
             # Load XML tree from file or URL
-            (success, message, tree) = self.load_xml(xml_file_name, url)
+            (success, message, tree) = self.load_xml(url, filename=xml_file_name)
 
             if not success:
                 return (success, message)
@@ -146,6 +203,76 @@ class PublicData(object):
             message = str(e)
 
         return (False, message)
+
+    def tax_records(self, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", refresh:bool=False)->(bool, str, object):
+        """
+        Search for Tax Records by state. Results are cached for one day (until midnight, not necessarily 24 hours).
+
+        Args:
+            search_terms (str): Terms to search for in the records
+            match_type (str): "all" to match all *search_terms* or "any" to match any *search_terms*.
+            match_scope (str): "name" to search by the *name* field or "main" to search in all fields.
+            us_state (str): Two-letter state abbreviation to search within.
+            refresh (bool): If True, skips the cache and forces a refresh from PublicData. Otherwise returns
+                            cached values from that same calendar date, if any.
+
+        Returns:
+            (bool, str, object): The *bool* indicates success or failure.
+                                 The *str* provides a diagnostic message.
+                                 The *object* is an ET tree, if successful otherwise NoneType.
+        """
+        try:
+            db_name = "grp_cad_tx_advanced_" + match_scope
+            return self.search(db_name, search_terms, match_type, match_scope, us_state, refresh)
+        except Exception as e:
+            self.logger.error("Error retrieving from %s: %s")
+            self.logger.exception(e)
+            message = str(e)
+
+        return (False, message, None)
+
+    def dmv(self, search_terms, match_type:str="all", match_scope:str="name", us_state:str="tx", refresh:bool=False, exemption:bool=None)->(bool, str, object):
+        db_name = "{}dmv|{}".format(us_state, match_scope)
+        return self.search(db_name=db_name, search_terms=search_terms, match_scope="main", search_type="advanced", exemption="tacDMV=DPPATX-01")
+
+    def details(self, db_name:str, record_id:str, edition:str, refresh:bool=False)->(bool, str, object):
+        url = "http://{}/pddetails.php?db={}&rec={}&ed={}&dlnumber={}&id={}&disp=XML&tacDMV=DPPATX-01" \
+               .format(self.search_server, db_name, record_id, edition, self.login_id, self.id)
+        return self.load_xml(url, refresh=refresh)
+
+    def search(self, db_name:str, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", refresh:bool=False, search_type:str="advanced", exemption:str=None)->(bool, str, object):
+        """
+        Search for Tax Records by state. Results are cached for one day (until midnight, not necessarily 24 hours).
+
+        Args:
+            database (str): Name of database to search
+            search_terms (str): Terms to search for in the records
+            match_type (str): "all" to match all *search_terms* or "any" to match any *search_terms*.
+            match_scope (str): "name" to search by the *name* field or "main" to search in all fields.
+            us_state (str): Two-letter state abbreviation to search within.
+            refresh (bool): If True, skips the cache and forces a refresh from PublicData. Otherwise returns
+                            cached values from that same calendar date, if any.
+
+        Returns:
+            (bool, str, object): The *bool* indicates success or failure.
+                                 The *str* provides a diagnostic message.
+                                 The *object* is an ET tree, if successful otherwise NoneType.
+        """
+        try:
+            normalized_terms = normalize_search_terms(search_terms)
+            url = "http://{}/pdsearch.php?p1={}&matchany={}&input={}&dlnumber={}&id={}&type={}&asinname={}&disp=XML" \
+                  .format(self.search_server, normalized_terms, match_type, db_name, self.login_id, self.id, search_type, match_scope)
+            if exemption:
+                url = url + "&" + exemption
+
+            # Load XML tree from file or URL
+            return self.load_xml(url, refresh=refresh)
+        except Exception as e:
+            self.logger.error("Error retrieving from %s: %s")
+            self.logger.exception(e)
+            message = str(e)
+
+        return (False, message, None)
 
     def document(self, db_label:str = "grp_master")->(dict):
         """
@@ -185,7 +312,7 @@ class PublicData(object):
                   .format(self.search_server, "{}", self.login_id, self.id)
             url = url_pattern.format(db_label)
             filename = filename_pattern.format(db_label)
-            (success, message, tree) = self.load_xml(filename, url)
+            (success, message, tree) = self.load_xml(url, filename=filename)
 
             if not success:
                 return (success, message, None, "err")
@@ -227,3 +354,33 @@ def today_yyyymmdd()->str:
         (str): Today's date in YYYYMMDD format.
     """
     return datetime.now().strftime("%Y%m%d")
+
+def normalize_search_terms(search_terms:str)->str:
+    """
+    Normalize the search terms so that searching for "A b c" is the same as searching for
+    "a b C", "B C A", etc.
+
+    Args:
+        search_terms (str): Space-delimited list of search terms.
+
+    Returns:
+        (str): Space-delimited search terms, lowercased and sorted.
+    """
+    if not search_terms:
+        return search_terms
+
+    terms = search_terms.lower().split(" ")
+    terms.sort()
+    return " ".join(terms)
+
+def fs_name(url:str)->str:
+    """
+    Create a filesystem name to cache today's version of the XML response to a search request.
+
+    Args:
+        url (str): URL created to perform the search.
+
+    Returns:
+        (str): Filesystem-compatible version of URL suitable as a filename.
+    """
+    return "{}-{}.xml".format(today_yyyymmdd(), base64.b64encode(url.encode()).decode())
