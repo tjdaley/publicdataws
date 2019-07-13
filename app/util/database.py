@@ -87,6 +87,8 @@ class Database(object):
         """
         # Record is to be deleted from cache (or at least ignored) after the time-to-live time has passed.
         ttl = datetime.utcnow() + timedelta(days=3)
+        now = datetime.utcnow()
+        self.logger.debug("**** NOW={} TTL={}  DIFF={}".format(now, ttl, ttl-now))
 
         # Serialize the result
         (result_type, serialized_result) = self.serialize_cache_entry(result)

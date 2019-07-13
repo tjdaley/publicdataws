@@ -372,15 +372,3 @@ def normalize_search_terms(search_terms:str)->str:
     terms = search_terms.lower().split(" ")
     terms.sort()
     return " ".join(terms)
-
-def fs_name(url:str)->str:
-    """
-    Create a filesystem name to cache today's version of the XML response to a search request.
-
-    Args:
-        url (str): URL created to perform the search.
-
-    Returns:
-        (str): Filesystem-compatible version of URL suitable as a filename.
-    """
-    return "{}-{}.xml".format(today_yyyymmdd(), base64.b64encode(url.encode()).decode())
