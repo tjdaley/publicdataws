@@ -13,12 +13,13 @@ import xml.etree.ElementTree as ET
 
 from util.logger import Logger
 from util.publicdata import PublicData
+from util.zillow import Zillow
 
 class WebService(object):
     """
     Encapsulates the behavior of a web service for access PublicData.
     """
-    def __init__ (self, username:str, password:str):
+    def __init__ (self, username:str, password:str, zillow_id:str):
         """
         Class initializer.
         """
@@ -26,6 +27,7 @@ class WebService(object):
         self.username = username
         self.password = password
         self.api = PublicData()
+        self.zillow = Zillow(zillow_id)
 
     def connect(self)->(bool, str):
         """
@@ -38,7 +40,7 @@ class WebService(object):
         """
         return self.api.login(self.username, self.password)
 
-    def tax_records(self, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", refresh:bool=False)->dict:
+    def tax_records(self, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", get_zillow:bool=True, refresh:bool=False)->list:
         """
         Retrieve tax records throughout the given state.
 
@@ -47,6 +49,7 @@ class WebService(object):
             match_type (str): "all" to match all *search_terms* or "any" to match any *search_terms*.
             match_scope (str): "name" to search by the *name* field or "main" to search in all fields.
             us_state (str): Two-letter state abbreviation to search within.
+            get_zillow (bool): Get ZILLOW results?
             refresh (bool): If True, skips the cache and forces a refresh from PublicData. Otherwise returns
                             cached values from that same calendar date, if any.
         Returns:
@@ -54,17 +57,51 @@ class WebService(object):
         """
         (success, message, tree) = self.api.tax_records(search_terms, match_type, match_scope, us_state, refresh)
         if not success:
-            return {}
-
-        # Convert PublicData XML into a dictionary.
+            self.logger(message)
+            return []
+        
+        # Convert PublicData XML into a list.
+        results = []
         root = tree.getroot()
         items = root.findall("./results/record")
+        self.logger.debug("Retrieved %d tax records.", len(items))
+
         for item in items:
             owner = item.find("disp_fld1").text
             address = item.find("disp_fld2").text
+            (street, csz) = address.split(",", 1)
+            (z, street) = street.split(":")
             source = item.find("source").text
-            print("%-30s - %-75s (%s)" % (owner, address, source))
-        return {}
+            parcel = {"owner": owner, "street": street.strip(), "csz": csz.strip(), "source":source}
+            results.append(parcel)
+
+        if get_zillow:
+            results = self.zillow_data(results)
+
+        return results
+
+    def zillow_data(self, properties:list)->list:
+        results = []
+        for parcel in properties:
+            (success, message, tree) = self.zillow.search(parcel["street"], parcel["csz"])
+            if not success:
+                self.logger.error("Error retrieving ZILLOW data for %s, %s: %s", parcel["street"], parcel["csz"], message)
+                parcel["zillow"] = False
+                results.append(parcel)
+                continue
+            
+            root = tree.getroot()
+            address = root.find("./response/results/result/address")
+            parcel["zillow"] = True
+            parcel["street"] = address.find("street").text
+            parcel["csz"] = "{}, {} {}".format(address.find("city").text, address.find("state").text, address.find("zipcode").text)
+            parcel["latitide"] = address.find("latitude").text
+            parcel["longitude"] = address.find("longitude").text
+            parcel["zestimate"] = float(root.find("./response/results/result/zestimate/amount").text)
+            details_link = root.find("./response/results/result/links/homedetails").text
+            parcel["zbranding"] = '<a href="{}">See more details for {} on Zillow.</a>'.format(details_link, parcel["street"])
+            results.append(parcel)
+        return results
 
     def dmv_any(self, search_terms):
         return self.__dmv(search_terms, "main")
@@ -238,12 +275,21 @@ def amortization_schedule(details:dict, normal_useful_life:int=15)->(list, str):
     return (schedule, message)
 
 def main(args:{}):
-    webservice = WebService(args.username, args.password)
+    webservice = WebService(args.username, args.password, args.zillowid)
     (success, message) = webservice.connect()
     if success:
-        #webservice.tax_records("785 MeadowView", match_scope="main")
+        records = webservice.tax_records(args.search, match_scope="main")
+        for record in records:
+            if record["zillow"]:
+                message = "{}\n{}\n{}\nZEstimate: {}\n{}\n({})\n".format(
+                    record["owner"], record["street"], record["csz"], record["zestimate"], record["zbranding"], record["source"])
+            else:
+                message = "{}\n{}\n{}\n({})\n".format(
+                    record["owner"], record["street"], record["csz"], record["source"])
+            print(message)
+
         #print("-----M A I N------------------------------------------------------")
-        webservice.dmv_any(args.search)
+        #webservice.dmv_any(args.search)
         #print("-----P L A T E----------------------------------------------------")
         #webservice.dmv_plate("DXZ3906")
         #print("-----V I N--------------------------------------------------------")
@@ -256,6 +302,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Webservice for PublicData")
     parser.add_argument("--username", "-u", help="Username for logging into the PublicData service.")
     parser.add_argument("--password", "-p", help="Password for logging into the PublicData service.")
+    parser.add_argument("--zillowid", "-z", required=True, help="Zillow API credential from https://www.zillow.com/howto/api/APIOverview.htm")
     parser.add_argument("--search", "-s", help="Search term")
     args = parser.parse_args()
     main(args)
