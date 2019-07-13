@@ -1,5 +1,7 @@
 # local cache of query results
 cache/
+*.xml
+passwords.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
