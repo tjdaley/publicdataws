@@ -18,8 +18,11 @@ import xml
 from .database import Database
 from .logger import Logger
 
+from .classes.dmvdetails import DmvDetails
+from .classes.dmvsummary import DmvSummary
 
 LOGIN_URL = "https://login.publicdata.com/pdmain.php/logon/checkAccess?disp=XML&login_id={}&password={}"
+SOURCE = "PUBLICDATA"
 
 class PublicData(object):
     """
@@ -106,7 +109,7 @@ class PublicData(object):
                 return (True, "OK", tree)
 
             if self.database and not refresh:
-                response = self.database.check_cache("PUBLICDATA", url)
+                response = self.database.check_cache(SOURCE, url)
                 if response:
                     self.logger.debug("Loading from cache.")
                     return (True, "OK", response)
@@ -118,6 +121,7 @@ class PublicData(object):
 
             # Convert response from stream of bytes to string
             content = response.content.decode()
+            print(content)
 
             # Deserialize response to XML element tree
             tree = ET.ElementTree(ET.fromstring(content))
@@ -125,7 +129,7 @@ class PublicData(object):
             # See if we got an error response.
             root = tree.getroot()
             if root.get("type").lower() == "error":
-                message = root.find("message").text
+                message = error_message(root)
                 return (False, message, tree)
 
             # All looks ok from a 30,000-foot level.
@@ -133,7 +137,7 @@ class PublicData(object):
             if filename:
                 open(filename, "w").write(content)
             elif self.database:
-                self.database.insert_cache(source="PUBLICDATA", query=url, result=tree)
+                self.database.insert_cache(source=SOURCE, query=url, result=tree)
             else:
                 self.logger.warn("Unable to cache search result. Is the database down?")
 
@@ -233,7 +237,27 @@ class PublicData(object):
 
     def dmv(self, search_terms, match_type:str="all", match_scope:str="name", us_state:str="tx", refresh:bool=False, exemption:bool=None)->(bool, str, object):
         db_name = "{}dmv|{}".format(us_state, match_scope)
-        return self.search(db_name=db_name, search_terms=search_terms, match_scope="main", search_type="advanced", exemption="tacDMV=DPPATX-01")
+        summaries = []
+        (success, message, tree) = self.search(db_name=db_name, search_terms=search_terms, match_scope="main", search_type="advanced", exemption="tacDMV=DPPATX-01")
+        if success:
+            root = tree.getroot()
+            cars = root.findall("./results/record")
+            for car in cars:
+                dmv_summary = DmvSummary()
+                dmv_summary.from_xml(car, SOURCE, us_state.upper())
+                summaries.append(dmv_summary)
+                
+        return (success, message, summaries)
+
+    def dmv_details(self, summary, refresh:bool=False)->(bool, str, DmvDetails):
+        (success, message, tree) = self.details(summary.db, summary.rec, summary.ed, refresh)
+        if success:
+            root = tree.getroot()
+            fields = root.findall("./dataset/dataitem/textdata")
+            details = DmvDetails()
+            details.from_xml(fields[0], SOURCE, summary.state)
+            return (success, message, details)
+        return (success, message, None)
 
     def details(self, db_name:str, record_id:str, edition:str, refresh:bool=False)->(bool, str, object):
         url = "http://{}/pddetails.php?db={}&rec={}&ed={}&dlnumber={}&id={}&disp=XML&tacDMV=DPPATX-01" \
@@ -342,6 +366,37 @@ class PublicData(object):
             return (False, str(e), None, "err")
 
         return (False, "Programmer error", None, "err")
+
+def error_message(root)->str:
+    """
+    Find an error message in XML that has indicated an error.
+    Unfortunately, the error message is not in the same place, depending on
+    the error. Here we have a list of paths to search for and we go through
+    them until we find a message or run out of places to look.
+
+    Args:
+        root (xml.etree.ElementTree): Root node of an element tree
+
+    Returns:
+        (str): Error message
+        (NoneType): Indicates we didn't find a message.
+    """
+
+    # Paths we will search. We search in the order in which the path
+    # appears in the *paths* list, so insert them in the order you want
+    # them searched.
+    #
+    # I do not understand why find() fails and findall() works.
+    # tjd 07/16/2019
+    paths = ["message", "./pdheaders/pdheader1"]
+    message = None
+    for path in paths:
+        message_node = root.findall(path)
+        if message_node:
+            message = message_node[0].text
+            break
+
+    return message
 
 def today_yyyymmdd()->str:
     """
