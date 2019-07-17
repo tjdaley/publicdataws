@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from util.logger import Logger
 from util.publicdata import PublicData
 from util.zillow import Zillow
+from util.classes.dmvdetails import DmvDetails
 
 class WebService(object):
     """
@@ -26,7 +27,7 @@ class WebService(object):
         self.logger = Logger.get_logger(log_name="pdws")
         self.username = username
         self.password = password
-        self.api = PublicData()
+        self.public_data = PublicData()
         self.zillow = Zillow(zillow_id)
 
     def connect(self)->(bool, str):
@@ -38,7 +39,7 @@ class WebService(object):
         Returns:
             (bool, str): Where *bool* indicates success or failure and *str* provides an explanatory message.
         """
-        return self.api.login(self.username, self.password)
+        return self.public_data.login(self.username, self.password)
 
     def tax_records(self, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", get_zillow:bool=True, refresh:bool=False)->list:
         """
@@ -55,7 +56,7 @@ class WebService(object):
         Returns:
             (dict): Dictionary of results if successful.
         """
-        (success, message, tree) = self.api.tax_records(search_terms, match_type, match_scope, us_state, refresh)
+        (success, message, tree) = self.public_data.tax_records(search_terms, match_type, match_scope, us_state, refresh)
         if not success:
             self.logger.warn(message)
             return []
@@ -116,95 +117,64 @@ class WebService(object):
         return self.__dmv(search_terms, "vin")
 
     def __dmv(self, search_terms, match_scope):
-        (success, message, tree) = self.api.dmv(search_terms, match_scope=match_scope)
+        (success, message, car_summaries) = self.public_data.dmv(search_terms, match_scope=match_scope)
         if not success:
             return {}
 
         # Convert PublicData XML into a dictionary.
-        root = tree.getroot()
-        cars = root.findall("./results/record")
-        tree.write("dmv_{}.xml".format(match_scope))
-        for car in cars:
-            rec_num = car.get("rec")
-            db = car.get("db")
-            edition = car.get("ed")
-            (status, message, car_details) = self.api.details(db, rec_num, edition)
-            # car_details.write("dmv_{}.xml".format(rec_num))
-            fields = car_details.findall("./dataset/dataitem/textdata/field")
-            details = {}
-            for field in fields:
-                label = field.get("label").lower()
-                if label == "owner name":
-                    details["owner"] = field.text
-                elif label == "title date":
-                    details["purchased"] = field.get("formatteddate")
-                elif label == "model year":
-                    details["year"] = field.text
-                elif label == "make":
-                    details["make"] = field.text
-                elif label == "model":
-                    details["model"] = field.text
-                elif label == "vin number":
-                    details["vin"] = field.get("formattedvin")
-                elif label == "vehicle sales price":
-                    details["price"] = field.text
-                elif label == "license plate number":
-                    details["plate"] = field.text
-
-            (schedule, message) = amortization_schedule(details)
-            print_schedule(schedule, message, details)
+        for car in car_summaries:
+            (status, message, car_details) = self.public_data.dmv_details(car)
+            (schedule, message) = amortization_schedule(car_details)
+            print_schedule(schedule, message, car_details)
         return {}
 
     def query(self)->(bool, str):
         """
-        Query the PublicData service.
+        Query the PublicData service for a list of databases that can be searched.
 
         Args:
             None.
         Returns:
             (bool, str): Where *bool* indicates success or failure and *str* provides an explanatory message.
         """
-        return self.api.document()
+        return self.public_data.document()
 
-def print_schedule(schedule:list, message:str, details:dict):
+def print_schedule(schedule:list, message:str, details:DmvDetails):
     print("\n", "-"*41, sep="")
     print("%-41s" % "A M O R T I Z A T I O N   S C H E D U L E\n")
     print(message)
 
     try:
-        print("Vehicle: %s %s %s" % (details["year"], details["make"], details["model"]))
+        print("Vehicle: %s %s %s" % (details.year, details.make, details.model))
     except Exception as e:
         print("Incomplete details: {}".format(str(e)))
         print(details)
         return
 
-    if details["purchased"]:
-        purch_year = details["purchased"][0:4]
-        purch_month = details["purchased"][4:6]
-        purch_day = details["purchased"][6:8]
+    if details.title_date:
+        purch_year = details.title_date[0:4]
+        purch_month = details.title_date[4:6]
+        purch_day = details.title_date[6:8]
         purch_date = "{}/{}/{}".format(purch_month, purch_day, purch_year)
     else:
         purch_date = "(Unknown)"
-    print("VIN    : %s" % (details["vin"]))
-    print("Purch  : %s  for $%8.2f" % (purch_date, float(details["price"])/100.00))
-    print("Titled : %s" % details["owner"])
+    print("VIN    : %s" % (details.vin))
+    print("Purch  : %s for $%8.2f" % (purch_date, float(details.sold_price)/100.00))
+    print("Titled : %s" % details.owner_name)
     print("-"*41)
     if schedule:
         print("%4s  %-11s  %-11s  %-11s" % ("Year", "Begin", "Deprec.", "End"))
     for line_item in schedule:
         print("%-4s  %9.2f  %9.2f  %9.2f" % (line_item["year"], line_item["begin_value"], line_item["depreciation"], line_item["end_value"]))
 
-def amortization_schedule(details:dict, normal_useful_life:int=15)->(list, str):
+def amortization_schedule(details:DmvDetails, normal_useful_life:int=15)->(list, str):
     """
     Compute an amortization schedule for this asset.
     This method applies a sum-of-the-years-digits accelerate depreciation
     to recognize that assets depreciate more rapidly in their earlier life.
 
     Args:
-        details (dict): Details about the asset to be depreciated. Must have at least
-                        "year"........The year the asset was manufactured.
-                        "price".......The purchase price, in hundredths of dollars.
-                        "purchased"...The date the asset was purchased (YYYYMMDD)
+        details (DmvDetails): Details about the asset to be depreciated.
         normal_useful_life (int): Number of years of normal useful life (not remaining useful life.)
 
     Returns:
@@ -212,13 +182,13 @@ def amortization_schedule(details:dict, normal_useful_life:int=15)->(list, str):
         (str): A message explaining the outcome of this method.
     """
     try:
-        year = int(details["year"])
+        year = int(details.year)
     except KeyError as e:
         return ([], "Cannot depreciate an asset with no model year.")
     
     try:
-        original_value = float(details["price"])/100.00
-        start_value = float(details["price"])/100.00
+        original_value = float(details.sold_price)/100.00
+        start_value = float(details.sold_price)/100.00
     except KeyError as e:
         return([], "Cannot depreciate an asset with no purchase price.")
 
@@ -232,12 +202,12 @@ def amortization_schedule(details:dict, normal_useful_life:int=15)->(list, str):
 
     # What year was this asset purchased?
     try:
-        purchased_year = int(details["purchased"][:4])
+        purchased_year = int(details.title_date[:4])
     except Exception as e:
         print(str(e))
         purchased_year = year
         message = "Unable to parse purchase date of '{}'. Used '{}' instead" \
-                  .format(details["purchased"], year)
+                  .format(details.sold_date, year)
 
     # If the asset's purchase year is less than the model year (frequently happens with
     # motor vehicles), use the purchase year as the base year.
@@ -278,6 +248,7 @@ def main(args:{}):
     webservice = WebService(args.username, args.password, args.zillowid)
     (success, message) = webservice.connect()
     if success:
+        """
         records = webservice.tax_records(args.search, match_scope="main")
         for record in records:
             if record["zillow"]:
@@ -287,13 +258,13 @@ def main(args:{}):
                 message = "{}\n{}\n{}\n({})\n".format(
                     record["owner"], record["street"], record["csz"], record["source"])
             print(message)
-
+        """
         #print("-----M A I N------------------------------------------------------")
         #webservice.dmv_any(args.search)
         #print("-----P L A T E----------------------------------------------------")
         #webservice.dmv_plate("DXZ3906")
         #print("-----V I N--------------------------------------------------------")
-        #webservice.dmv_vin("2C3KA63HX8H139624")
+        webservice.dmv_vin("2C3KA63HX8H139624")
 
     else:
         print("Error logging in:", message)
@@ -302,7 +273,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Webservice for PublicData")
     parser.add_argument("--username", "-u", help="Username for logging into the PublicData service.")
     parser.add_argument("--password", "-p", help="Password for logging into the PublicData service.")
-    parser.add_argument("--zillowid", "-z", required=True, help="Zillow API credential from https://www.zillow.com/howto/api/APIOverview.htm")
+    parser.add_argument("--zillowid", "-z", help="Zillow API credential from https://www.zillow.com/howto/api/APIOverview.htm")
     parser.add_argument("--search", "-s", help="Search term")
     args = parser.parse_args()
     main(args)
