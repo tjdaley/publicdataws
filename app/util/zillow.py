@@ -17,8 +17,8 @@ import xml
 from .database import Database
 from .logger import Logger
 
-
 SEARCH_URL = "https://www.zillow.com/webservice/GetSearchResults.htm?zws-id={}&address={}&citystatezip={}"
+SOURCE = "ZILLOW"
 
 class Zillow(object):
     """
@@ -90,7 +90,7 @@ class Zillow(object):
                 return (True, "OK", tree)
 
             if self.database and not refresh:
-                response = self.database.check_cache("ZILLOW", url)
+                response = self.database.check_cache(SOURCE, url)
                 if response:
                     self.logger.debug("Loading from cache.")
                     return (True, "OK", response)
@@ -118,7 +118,7 @@ class Zillow(object):
             if filename:
                 open(filename, "w").write(content)
             elif self.database:
-                self.database.insert_cache(source="ZILLOW", query=url, result=tree)
+                self.database.insert_cache(source=SOURCE, query=url, result=tree)
             else:
                 self.logger.warn("Unable to cache search result. Is the database down?")
 
