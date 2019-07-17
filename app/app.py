@@ -57,7 +57,7 @@ class WebService(object):
         """
         (success, message, tree) = self.api.tax_records(search_terms, match_type, match_scope, us_state, refresh)
         if not success:
-            self.logger(message)
+            self.logger.warn(message)
             return []
         
         # Convert PublicData XML into a list.
@@ -72,7 +72,7 @@ class WebService(object):
             (street, csz) = address.split(",", 1)
             (z, street) = street.split(":")
             source = item.find("source").text
-            parcel = {"owner": owner, "street": street.strip(), "csz": csz.strip(), "source":source}
+            parcel = {"owner": owner, "street": street.strip(), "csz": csz.strip(), "source":source, "zillow": False}
             results.append(parcel)
 
         if get_zillow:
