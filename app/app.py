@@ -94,9 +94,9 @@ class RegisterForm(Form):
         validators.EqualTo('confirm', "Passwords do no match.")
         ])
     confirm = PasswordField("Confirm password")
-    pd_username = StringField("Public Data username", validators=[validators.Required()])
-    pd_password = StringField("Public Data password", validators=[validators.Required()])
-    zillow_key = StringField("Zillow API key", validators=[validators.Required()])
+    pd_username = StringField("Public Data username", validators=[validators.DataRequired()])
+    pd_password = StringField("Public Data password", validators=[validators.DataRequired()])
+    zillow_key = StringField("Zillow API key", validators=[validators.DataRequired()])
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -121,9 +121,9 @@ class SettingsForm(Form):
     password = PasswordField("Current password", [
         validators.DataRequired()
         ])
-    pd_username = StringField("Public Data username", validators=[validators.Required()])
-    pd_password = StringField("Public Data password", validators=[validators.Required()])
-    zillow_key = StringField("Zillow API key", validators=[validators.Required()])
+    pd_username = StringField("Public Data username", validators=[validators.DataRequired()])
+    pd_password = StringField("Public Data password", validators=[validators.DataRequired()])
+    zillow_key = StringField("Zillow API key", validators=[validators.DataRequired()])
 
 @app.route('/settings', methods=['GET', 'POST'])
 @is_logged_in
@@ -199,9 +199,11 @@ def logout():
 if __name__ == "__main__":
     #global WEBSERVICE
     parser = argparse.ArgumentParser(description="Webservice for DiscoveryBot")
+    parser.add_argument("--debug", help="Run server in debug mode", action='store_true')
+    parser.add_argument("--port", help="TCP port to listen on", type=int, default=5001)
     parser.add_argument("--zillowid", "-z", help="Zillow API credential from https://www.zillow.com/howto/api/APIOverview.htm")
     args = parser.parse_args()
 
     WEBSERVICE = WebService(args.zillowid)
     app.secret_key="SDFIIUWER*HGjdf8*"
-    app.run(debug=True)
+    app.run(debug=args.debug, port=args.port)
