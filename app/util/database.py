@@ -19,6 +19,7 @@ from .logger import Logger
 DB_URL = "mongodb://ec2-54-235-51-13.compute-1.amazonaws.com:27017/"
 DB_NAME = "discoverybot"
 CACHE_TABLE_NAME = "search_cache"
+USER_TABLE = "discoverybot_users"
 
 class Database(object):
     """
@@ -88,7 +89,7 @@ class Database(object):
         # Record is to be deleted from cache (or at least ignored) after the time-to-live time has passed.
         ttl = datetime.utcnow() + timedelta(days=3)
         now = datetime.utcnow()
-        self.logger.debug("**** NOW={} TTL={}  DIFF={}".format(now, ttl, ttl-now))
+        # self.logger.debug("**** NOW={} TTL={}  DIFF={}".format(now, ttl, ttl-now))
 
         # Serialize the result
         (result_type, serialized_result) = self.serialize_cache_entry(result)
@@ -195,6 +196,32 @@ class Database(object):
 
         return None
 
+    def add_user(self, fields:dict)->bool:
+        """
+        """
+        record = record_from_dict(fields)
+        filter = {"email": fields["email"]}
+        document = self.dbconn[USER_TABLE].find_one(filter)
+
+        if document:
+            return False
+
+        mongo_result = self.dbconn[USER_TABLE].replace_one(filter, record, upsert=True)
+        return True
+
+    def get_user(self, fields:dict)->dict:
+        """
+        """
+        filter = fields
+        document = self.dbconn[USER_TABLE].find_one(filter)
+        return document
+
+    def update_user(self, fields:dict)->dict:
+        """
+        """
+        filter = {"email": fields['email']}
+        mongo_result = self.dbconn[USER_TABLE].update_one(filter, {"$set":fields}, upsert=False)
+        return True
 
 def base_record()->dict:
     """
