@@ -1,0 +1,11 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1 class="error">Search Error</h1>
+    <h2>Operation: {{operation}}</h2>
+    <p class="lead">{{message}}</p>
+    <ul class="list-group">
+        {% for variable in variables %}
+            <li class="list-group-item">{{variable}}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

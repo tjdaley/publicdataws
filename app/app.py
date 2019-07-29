@@ -1,279 +1,207 @@
 """
-webservice.py - Webservice for PublicData
+app.py - Flask-based server.
 
-Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
+Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
 __author__ = "Thomas J. Daley, J.D."
 __version__ = "0.0.1"
 
 import argparse
-from datetime import datetime
-import json
-import xml.etree.ElementTree as ET
+import random
+from flask import Flask, render_template, request, flash, redirect, url_for, session, logging
+from wtforms import Form, StringField, TextAreaField, PasswordField, validators
+from passlib.hash import sha256_crypt
+from functools import wraps
 
-from util.logger import Logger
-from util.publicdata import PublicData
-from util.zillow import Zillow
-from util.classes.dmvdetails import DmvDetails
+from data import Articles
+ARTICLES = Articles()
 
-class WebService(object):
-    """
-    Encapsulates the behavior of a web service for access PublicData.
-    """
-    def __init__ (self, username:str, password:str, zillow_id:str):
-        """
-        Class initializer.
-        """
-        self.logger = Logger.get_logger(log_name="pdws")
-        self.username = username
-        self.password = password
-        self.public_data = PublicData()
-        self.zillow = Zillow(zillow_id)
+from webservice import WebService
+WEBSERVICE = None
 
-    def connect(self)->(bool, str):
-        """
-        Connect to the the PublicData service.
+from util.database import Database
+DATABASE = Database()
+DATABASE.connect()
 
-        Args:
-            None.
-        Returns:
-            (bool, str): Where *bool* indicates success or failure and *str* provides an explanatory message.
-        """
-        return self.public_data.login(self.username, self.password)
+app = Flask(__name__)
 
-    def tax_records(self, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", get_zillow:bool=True, refresh:bool=False)->list:
-        """
-        Retrieve tax records throughout the given state.
+# Decorator to check if user is logged in
+def is_logged_in(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'logged_in' in session:
+            return f(*args, **kwargs)
+        else:
+            flash("Unauthorized - Please Log In", "danger")
+            return redirect(url_for("login"))
+    return wrap
 
-        Args:
-            search_terms (str): Terms to search for in the records
-            match_type (str): "all" to match all *search_terms* or "any" to match any *search_terms*.
-            match_scope (str): "name" to search by the *name* field or "main" to search in all fields.
-            us_state (str): Two-letter state abbreviation to search within.
-            get_zillow (bool): Get ZILLOW results?
-            refresh (bool): If True, skips the cache and forces a refresh from PublicData. Otherwise returns
-                            cached values from that same calendar date, if any.
-        Returns:
-            (dict): Dictionary of results if successful.
-        """
-        (success, message, tree) = self.public_data.tax_records(search_terms, match_type, match_scope, us_state, refresh)
-        if not success:
-            self.logger.warn(message)
-            return []
-        
-        # Convert PublicData XML into a list.
-        results = []
-        root = tree.getroot()
-        items = root.findall("./results/record")
-        self.logger.debug("Retrieved %d tax records.", len(items))
+# Helper to create Public Data credentials from session variables
+def pd_credentials(mysession)->dict:
+    return {"username": session["pd_username"], "password": session["pd_password"]}
 
-        for item in items:
-            owner = item.find("disp_fld1").text
-            address = item.find("disp_fld2").text
-            (street, csz) = address.split(",", 1)
-            (z, street) = street.split(":")
-            source = item.find("source").text
-            parcel = {"owner": owner, "street": street.strip(), "csz": csz.strip(), "source":source, "zillow": False}
-            results.append(parcel)
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('home.html')
 
-        if get_zillow:
-            results = self.zillow_data(results)
+@app.route('/about', methods=['GET'])
+def about():
+    return render_template('about.html')
 
-        return results
+@app.route('/search/people', methods=['GET'])
+@is_logged_in
+def search_people_get():
+    return render_template('search_people.html')
 
-    def zillow_data(self, properties:list)->list:
-        results = []
-        for parcel in properties:
-            (success, message, tree) = self.zillow.search(parcel["street"], parcel["csz"])
-            if not success:
-                self.logger.error("Error retrieving ZILLOW data for %s, %s: %s", parcel["street"], parcel["csz"], message)
-                parcel["zillow"] = False
-                results.append(parcel)
-                continue
-            
-            root = tree.getroot()
-            address = root.find("./response/results/result/address")
-            parcel["zillow"] = True
-            parcel["street"] = address.find("street").text
-            parcel["csz"] = "{}, {} {}".format(address.find("city").text, address.find("state").text, address.find("zipcode").text)
-            parcel["latitide"] = address.find("latitude").text
-            parcel["longitude"] = address.find("longitude").text
-            parcel["zestimate"] = float(root.find("./response/results/result/zestimate/amount").text)
-            details_link = root.find("./response/results/result/links/homedetails").text
-            parcel["zbranding"] = '<a href="{}">See more details for {} on Zillow.</a>'.format(details_link, parcel["street"])
-            results.append(parcel)
-        return results
-
-    def dmv_any(self, search_terms):
-        return self.__dmv(search_terms, "main")
-
-    def dmv_name(self, search_terms):
-        return self.__dmv(search_terms, "name")
-
-    def dmv_plate(self, search_terms):
-        return self.__dmv(search_terms, "plate")
-
-    def dmv_vin(self, search_terms):
-        return self.__dmv(search_terms, "vin")
-
-    def __dmv(self, search_terms, match_scope):
-        (success, message, car_summaries) = self.public_data.dmv(search_terms, match_scope=match_scope)
-        if not success:
-            return {}
-
-        # Convert PublicData XML into a dictionary.
-        for car in car_summaries:
-            (status, message, car_details) = self.public_data.dmv_details(car)
-            (schedule, message) = amortization_schedule(car_details)
-            print_schedule(schedule, message, car_details)
-        return {}
-
-    def query(self)->(bool, str):
-        """
-        Query the PublicData service for a list of databases that can be searched.
-
-        Args:
-            None.
-        Returns:
-            (bool, str): Where *bool* indicates success or failure and *str* provides an explanatory message.
-        """
-        return self.public_data.document()
-
-def print_schedule(schedule:list, message:str, details:DmvDetails):
-    print("\n", "-"*41, sep="")
-    print("%-41s" % "A M O R T I Z A T I O N   S C H E D U L E\n")
-    print(message)
-
-    try:
-        print("Vehicle: %s %s %s" % (details.year, details.make, details.model))
-    except Exception as e:
-        print("Incomplete details: {}".format(str(e)))
-        print(details)
-        return
-
-    if details.title_date:
-        purch_year = details.title_date[0:4]
-        purch_month = details.title_date[4:6]
-        purch_day = details.title_date[6:8]
-        purch_date = "{}/{}/{}".format(purch_month, purch_day, purch_year)
+@app.route('/search/dmv', methods=['GET', 'POST'])
+@is_logged_in
+def search_dmv_get():
+    if request.method == 'GET':
+        return render_template('search_dmv.html')
     else:
-        purch_date = "(Unknown)"
-    print("VIN    : %s" % (details.vin))
-    print("Purch  : %s for $%8.2f" % (purch_date, float(details.sold_price)/100.00))
-    print("Titled : %s" % details.owner_name)
-    print("-"*41)
-    if schedule:
-        print("%4s  %-11s  %-11s  %-11s" % ("Year", "Begin", "Deprec.", "End"))
-    for line_item in schedule:
-        print("%-4s  %9.2f  %9.2f  %9.2f" % (line_item["year"], line_item["begin_value"], line_item["depreciation"], line_item["end_value"]))
+        form = request.form
+        (success, message, results) = WEBSERVICE.dmv_name(pd_credentials(session), form['owner_name'])
+        if success:
+            return render_template('vehicles.html', vehicles=results)
+        return render_template("search_error.html", formvariables=form, operation="Search: DMV", message=message)
 
-def amortization_schedule(details:DmvDetails, normal_useful_life:int=15)->(list, str):
-    """
-    Compute an amortization schedule for this asset.
-    This method applies a sum-of-the-years-digits accelerate depreciation
-    to recognize that assets depreciate more rapidly in their earlier life.
-
-    Args:
-        details (DmvDetails): Details about the asset to be depreciated.
-        normal_useful_life (int): Number of years of normal useful life (not remaining useful life.)
-
-    Returns:
-        (list): List of dicts containing the depreciation record for one year.
-        (str): A message explaining the outcome of this method.
-    """
-    try:
-        year = int(details.year)
-    except KeyError as e:
-        return ([], "Cannot depreciate an asset with no model year.")
-    
-    try:
-        original_value = float(details.sold_price)/100.00
-        start_value = float(details.sold_price)/100.00
-    except KeyError as e:
-        return([], "Cannot depreciate an asset with no purchase price.")
-
-    this_year = int(datetime.now().strftime("%Y"))
-    schedule = []
-    message = ""
-
-    # Cannot depreciate something that has no starting value
-    if original_value == 0.00:
-        return schedule, "Cannot depreciate an asset having no initial value."
-
-    # What year was this asset purchased?
-    try:
-        purchased_year = int(details.title_date[:4])
-    except Exception as e:
-        print(str(e))
-        purchased_year = year
-        message = "Unable to parse purchase date of '{}'. Used '{}' instead" \
-                  .format(details.sold_date, year)
-
-    # If the asset's purchase year is less than the model year (frequently happens with
-    # motor vehicles), use the purchase year as the base year.
-    if purchased_year == 0:
-        purchased_year = year
-    elif purchased_year < year:
-        year = purchased_year
-
-    # If asset has no remaining useful life, we're done.
-    if (purchased_year > year + normal_useful_life) or (this_year > year + normal_useful_life):
-        message = "Asset has no significant remaining value due to its age."
-        return (schedule, message)
-
-    # If asset was purchased *after* its model year (i.e. used), reduce it's
-    # remaining useful life accordingly.
-    if purchased_year > year:
-        useful_life = normal_useful_life - (purchased_year - year)
-        message = "Normal useful life of {} years reduced to remaining useful life of {} years." \
-                  .format(normal_useful_life, useful_life)
-        year = purchased_year
-    else:
-        useful_life = normal_useful_life
-
-    sum_of_years = sum(year for year in range(1, useful_life+1))
-
-    for amort_year in range(useful_life, 0, -1):
-        depreciation = float(amort_year / sum_of_years) * original_value * -1
-        end_value = start_value + depreciation
-        schedule.append({"year": str(year), "begin_value": start_value, "depreciation": depreciation, "end_value": end_value})
-        if year == this_year:
-            message = (message + " Current FMV = $%9.2f." % end_value).strip()
-        year += 1
-        start_value = end_value
-
-    return (schedule, message)
-
-def main(args:{}):
-    webservice = WebService(args.username, args.password, args.zillowid)
-    (success, message) = webservice.connect()
+@app.route('/vehicle/<string:db>/<string:ed>/<string:rec>/<string:state>/', methods=['GET'])
+@is_logged_in
+def vehicle_details(db, ed, rec, state):
+    (success, message, result) = WEBSERVICE.dmv_details(pd_credentials(session), db, ed, rec, state)
     if success:
-        """
-        records = webservice.tax_records(args.search, match_scope="main")
-        for record in records:
-            if record["zillow"]:
-                message = "{}\n{}\n{}\nZEstimate: {}\n{}\n({})\n".format(
-                    record["owner"], record["street"], record["csz"], record["zestimate"], record["zbranding"], record["source"])
-            else:
-                message = "{}\n{}\n{}\n({})\n".format(
-                    record["owner"], record["street"], record["csz"], record["source"])
-            print(message)
-        """
-        #print("-----M A I N------------------------------------------------------")
-        #webservice.dmv_any(args.search)
-        #print("-----P L A T E----------------------------------------------------")
-        #webservice.dmv_plate("DXZ3906")
-        #print("-----V I N--------------------------------------------------------")
-        webservice.dmv_vin("2C3KA63HX8H139624")
+        return render_template('vehicle.html', vehicle=result)
+    return render_template("search_error.html", formvariables=[], operation="Search: DMV Details", message=message)
 
-    else:
-        print("Error logging in:", message)
+@app.route('/search/rp', methods=['GET'])
+@is_logged_in
+def search_rp_get():
+    return render_template('search_rp.html')
+
+@app.route('/articles', methods=['GET'])
+def articles():
+    return render_template('articles.html', articles=ARTICLES)
+
+@app.route('/article/<string:id>/', methods=['GET'])
+def article(id):
+    return render_template('article.html', id=id)
+
+class RegisterForm(Form):
+    name = StringField("Name", [validators.DataRequired(), validators.Length(min=1, max=50)])
+    email = StringField("Email", [validators.Length(min=6, max=50)])
+    password = PasswordField("Password", [
+        validators.DataRequired(),
+        validators.EqualTo('confirm', "Passwords do no match.")
+        ])
+    confirm = PasswordField("Confirm password")
+    pd_username = StringField("Public Data username", validators=[validators.Required()])
+    pd_password = StringField("Public Data password", validators=[validators.Required()])
+    zillow_key = StringField("Zillow API key", validators=[validators.Required()])
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegisterForm(request.form)
+
+    if request.method == 'POST' and form.validate():
+        fields = request.form
+        myfields = {key:value for (key, value) in fields.items()}
+        myfields["password"] = sha256_crypt.hash(str(fields["password"]))
+        success = DATABASE.add_user(myfields)
+        if success:
+            flash("Your registration has been saved--Please login.", 'success')
+            return redirect(url_for('login'))
+
+        flash("{} is already registered.".format(fields["email"]), 'danger')
+        return redirect(url_for('register'))
+
+    return render_template('register.html', form=form)
+
+class SettingsForm(Form):
+    name = StringField("Name", [validators.DataRequired(), validators.Length(min=1, max=50)])
+    password = PasswordField("Current password", [
+        validators.DataRequired()
+        ])
+    pd_username = StringField("Public Data username", validators=[validators.Required()])
+    pd_password = StringField("Public Data password", validators=[validators.Required()])
+    zillow_key = StringField("Zillow API key", validators=[validators.Required()])
+
+@app.route('/settings', methods=['GET', 'POST'])
+@is_logged_in
+def settings():
+    myfields = {"email": session['email']}
+    result = DATABASE.get_user(myfields)
+    myfields = {key:value for (key, value) in result.items() if key != "password"}
+    form = SettingsForm(**myfields)
+
+    # Email not found - something fishy is going on.
+    if not result:
+        message = "Oddly, {} is not registered as a user.".format(myfields['email'])
+        flash(message, "danger")
+        return redirect(url_for("logout"))
+
+    if request.method == 'POST':
+        # Email found - do passwords match?
+        password_candidate = request.form["password"]
+        if sha256_crypt.verify(password_candidate, result["password"]):
+            # Yes, passwords match
+            messages = ["Your settings have been updated.", "Your settings are updated.", "Your changes have been saved."]
+            message = random.choice(messages)
+            fields = request.form
+            myfields = {key:value for (key, value) in fields.items() if key != "password" and value}
+            myfields['email'] = session['email']
+            session['pd_username'] = myfields['pd_username']
+            session['pd_password'] = myfields['pd_password']
+            session['zillow_key'] = myfields['zillow_key']
+            DATABASE.update_user(myfields)
+            return render_template("home.html", msg=message)
+
+    return render_template('settings.html', form=form, old_data=result)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        myfields = {"email": request.form['email']}
+        result = DATABASE.get_user(myfields)
+        print(result)
+
+        # Email not found in the user's table
+        if not result:
+            message = "{} is not regsitered as a user.".format(myfields["email"])
+            return render_template("login.html", error=message)
+
+        # Email found - Do passwords match?
+        password_candidate = request.form["password"]
+        if sha256_crypt.verify(password_candidate, result["password"]):
+            # Yes, passwords match
+            messages = ["Welcome back, {}!!", "Good to see you again, {}!!", "Hey, {}, welcome back!!"]
+            message = (random.choice(messages)).format(result["name"])
+            session['logged_in'] = True
+            session['email'] = result['email']
+            session['pd_username'] = result['pd_username']
+            session['pd_password'] = result['pd_password']
+            session['zillow_key'] = result['zillow_key']
+            return render_template("home.html", msg=message)
+
+        # No, passwords do not match
+        messages = ["We don't recognize that email/password combination.", "Invalid email or password", "Email and password do not match"]
+        message = random.choice(messages)
+        return render_template("login.html", error=message)
+
+    return render_template('login.html')
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    messages = ["Good bye!!", "Hope to see you again soon.", "Thank you for visiting!!"]
+    flash(random.choice(messages), "success")
+    return redirect(url_for('login'))
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Webservice for PublicData")
-    parser.add_argument("--username", "-u", help="Username for logging into the PublicData service.")
-    parser.add_argument("--password", "-p", help="Password for logging into the PublicData service.")
+    #global WEBSERVICE
+    parser = argparse.ArgumentParser(description="Webservice for DiscoveryBot")
     parser.add_argument("--zillowid", "-z", help="Zillow API credential from https://www.zillow.com/howto/api/APIOverview.htm")
-    parser.add_argument("--search", "-s", help="Search term")
     args = parser.parse_args()
-    main(args)
+
+    WEBSERVICE = WebService(args.zillowid)
+    app.secret_key="SDFIIUWER*HGjdf8*"
+    app.run(debug=True)

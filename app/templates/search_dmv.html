@@ -1,0 +1,46 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Motor Vehicle Search</h1>
+    <form class="needs-validation" novalidate method="post">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="state">State</label>
+                <select class="custom-select d-block w-100" id="state" name="state" required>
+                    <option value="TX" selected>Texas</option>
+                    <option value="CO">Colorado (OLD)</option>
+                    <option value="MS">Mississippi (OLD)</option>
+                    <option value="WV">West Virginia (OLD)</option>
+                    <option value="WI">Wisconsin (OLD)</option>
+                </select>
+                <div class="invalid-feedback">
+                    Please provide a valid state.
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label for="broad_search">Entire record</label>
+                <input type="text" class="form-control" id="broad_search" name="search">
+                <small class="text-muted">HINT: Do not specify street designations such as "drive" or "circle".</small>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label for="owner_name">Owner name</label>
+                <input type="text" class="form-control" id="owner_name" name="owner_name">
+                <small class="text-muted">HINT: Use double pipes ("||") to separate variations, e.g. Tom Daley||Thomas Daley.</small>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="plate">License plate</label>
+                <input type="text" class="form-control" id="plate" name="plate">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="vin">VIN</label>
+                <input type="text" class="form-control" id="vin" name="vin" placeholder="" value="">
+            </div>
+        </div>
+        <button class="btn btn-primary btn-lg btn-block" type="submit">Search</button>
+    </form>
+{% endblock %}

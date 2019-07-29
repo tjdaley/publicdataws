@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Update Your Settings</h1>
+    {% from "includes/_formhelpers.html" import render_field %}
+    <form method="POST">
+        <div class="form-group">
+            {{render_field(form.password, class_="form-control")}}
+            <small class="muted">Enter your current password to verify your changes.</small>
+        </div>
+        <div class="form-group">
+            {{render_field(form.name, class_="form-control")}}
+        </div>
+        <div class="form-group">
+            {{render_field(form.pd_username, class_="form-control")}}
+        </div>
+        <div class="form-group">
+            {{render_field(form.pd_password, class_="form-control")}}
+        </div>
+        <div class="form-group">
+            {{render_field(form.zillow_key, class_="form-control")}}
+        </div>
+            
+        <p><input type="submit" class="btn btn-primary" value="Submit"></p>
+    </form>
+{% endblock %}

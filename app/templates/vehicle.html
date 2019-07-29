@@ -1,0 +1,135 @@
+{% extends 'layout.html' %}
+{% block body %}
+
+    <div class="row">
+        <h1>{{vehicle.year or ""}} {{vehicle.make or ""}} {{vehicle.model or ""}}</h1>
+    </div>
+    <div class="row mb-6">
+        <small class="muted">{{vehicle.model_desc or ""}}</small>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="row"><h3>Current Owner</h3></div>
+            <div class="row">
+                {{vehicle.owner_name}}
+            </div>
+            <div class="row">
+                {{vehicle.owner_street}}
+            </div>
+            <div class="row">
+                {{vehicle.owner_city}}, {{vehicle.owner_state}} {{vehicle.owner_zip}}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="row"><h3>Notices To</h3></div>
+            <div class="row">
+                {{vehicle.notice_owner_name or ""}}
+            </div>
+            <div class="row">
+                {{vehicle.notice_owner_street or ""}}
+            </div>
+            <div class="row">
+                {{vehicle.notice_owner_city or ""}} {{vehicle.notice_owner_state or ""}} {{vehicle.notice_owner_zip or ""}}
+            </div>
+        </div>
+    
+        <div class="col-md-4">
+            <div class="row"><h3>Previous Owner</h3></div>
+            <div class="row">
+                {{vehicle.prev_owner_name}}
+            </div>
+            <div class="row">
+                {{vehicle.prev_owner_street or ""}}
+            </div>
+            <div class="row">
+                {{vehicle.prev_owner_city}}, {{vehicle.prev_owner_state}} {{vehicle.prev_owner_zip or ""}}
+            </div>
+        </div>
+    </div>
+
+    <div class="row"><hr /></div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="row"><small class="muted">VIN</small></div>
+            <div class="row">{{vehicle.vin or ""}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Plate</small></div>
+            <div class="row">{{vehicle.plate or ""}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Prev Plate</small></div>
+            <div class="row">{{vehicle.prev_plate or ""}}</div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Title Date</small></div>
+            <div class="row">{{vehicle.title_date or ""}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Sold Date</small></div>
+            <div class="row">{{vehicle.sold_date or ""}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Sold Price</small></div>
+            <div class="row">{{vehicle.sold_price or "(unknown)"}}</div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Body Type</small></div>
+            <div class="row">{{vehicle.body_type or "(unknown)"}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Vehicle Class</small></div>
+            <div class="row">{{vehicle.class_code or "(unknown)"}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="muted">Color(s)</small></div>
+            <div class="row">{{vehicle.main_color or ""}} / {{vehicle.other_color or ""}}</div>
+        </div>
+    </div>
+    
+{% endblock %}
+
+<!--
+    self.owner_city = None
+    self.owner_name = None
+    self.owner_state = None
+    self.owner_street = None
+    self.owner_zip = None
+
+    self.prev_owner_city = None
+    self.prev_owner_name = None
+    self.prev_owner_state = None
+    self.prev_owner_street = None
+    self.prev_owner_zip = None
+
+    self.notice_owner_city = None
+    self.notice_owner_name = None
+    self.notice_owner_state = None
+    self.notice_owner_street = None
+    self.notice_owner_zip = None
+
+    self.plate = None
+    self.prev_plate = None
+    self.vin = None
+
+    self.title_date = None
+    self.sold_date = None
+    self.sold_price = None
+
+    self.year = None
+    self.make = None
+    self.model = None
+    self.model_desc = None
+    self.body_type = None
+    self.class_code = None
+    self.main_color = None
+    self.other_color = None
+-->
