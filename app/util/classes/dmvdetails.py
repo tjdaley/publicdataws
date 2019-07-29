@@ -84,6 +84,11 @@ class DmvDetails(BaseRecord):
         self.main_color = None
         self.other_color = None
 
+    def __str__(self):
+        return "{} {} {} {} {}".format(
+            self.owner_name, self.owner_street, self.owner_city, self.owner_state, self.owner_zip
+        )
+
     def from_xml(self, root, source:str, state:str):
         """
         Parses given XML tree into our standard format.
@@ -101,11 +106,11 @@ class DmvDetails(BaseRecord):
 
         mappings = MAPPINGS[source][state]
 
-        ET.dump(root)
+        # ET.dump(root)
 
         for mapping in mappings:
             path = ".//field[@label='{}']".format(mapping["label"])
-            print("looking for", path)
+            #print("looking for", path)
             elem = root.findall(path)
             if elem:
                 if "prop" in mapping:
@@ -113,10 +118,11 @@ class DmvDetails(BaseRecord):
                 else:
                     value = elem[0].text
 
-                print("\tfound:", value)
+                #print("\tfound:", value)
 
                 if value:
                     setattr(self, mapping["attr"], value)
             else:
-                print("\tnot found")
+                #print("\tnot found")
+                pass
                 
