@@ -10,18 +10,34 @@ import xml.etree.ElementTree as ET
 
 from .baserecord import BaseRecord
 
+def transform_tx_year_make_model(s):
+    try:
+        result = (s.split(":")[1]).strip()
+    except Exception:
+        result = s
+
+    return result
+
+def transform_tx_plate(s):
+    try:
+        result = (s.split(":")[1]).strip()
+    except Exception:
+        result = s
+
+    return result
+
 MAPPINGS = {}
 MAPPINGS["PUBLICDATA"] = {}
 MAPPINGS["PUBLICDATA"]["TX"] = [
-    {"path": "./disp_fld1", "attr": "owner_name"},
-    {"path": "./disp_fld2", "attr": "vin"},
-    {"path": "./disp_fld3", "attr": "year_make_model"},
-    {"path": "./disp_fld4", "attr": "plate"},
-    {"path": "./disp_fld5", "attr": "prev_plate"},
-    {"path": "./source", "attr": "data_source"},
-    {"path": ".", "prop": "db", "attr": "db"},
-    {"path": ".", "prop": "ed", "attr": "ed"},
-    {"path": ".", "prop": "rec", "attr": "rec"}
+    {"path": "./disp_fld1", "attr": "owner_name", "transform": None},
+    #{"path": "./disp_fld3", "attr": "vin", "transform": None},
+    {"path": "./disp_fld2", "attr": "year_make_model", "transform": transform_tx_year_make_model},
+    {"path": "./disp_fld3", "attr": "plate", "transform": transform_tx_plate},
+    {"path": "./disp_fld5", "attr": "prev_plate", "transform": None},
+    {"path": "./source", "attr": "data_source", "transform": None},
+    {"path": ".", "prop": "db", "attr": "db", "transform": None},
+    {"path": ".", "prop": "ed", "attr": "ed", "transform": None},
+    {"path": ".", "prop": "rec", "attr": "rec", "transform": None}
 ]
 
 class DmvSummary(BaseRecord):
@@ -43,6 +59,10 @@ class DmvSummary(BaseRecord):
         self.rec = None
         self.source = None
         self.state = None
+
+    def __str__(self):
+        return "Owner name: {} || VIN: {} || Year/MakeModel: {} || Plate: {} || Prev Plate: {} || Data Source: {} || Source: {} || State: {}" \
+            .format(self.owner_name, self.vin, self.year_make_model, self.plate, self.prev_plate, self.data_source, self.source, self.state)
 
     def from_xml(self, root, source:str, state:str):
         """
@@ -73,5 +93,7 @@ class DmvSummary(BaseRecord):
                     value = elem[0].text
 
                 if value:
+                    if mapping["transform"]:
+                        value  = mapping["transform"](value)
                     setattr(self, mapping["attr"], value)
                 
