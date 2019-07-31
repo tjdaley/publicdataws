@@ -1,5 +1,5 @@
 """
-dmvsummary.py - Standard representation of a DMV summary record.
+dlsummary.py - Standard representation of a Driver's License summary record.
 
 Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
@@ -19,68 +19,36 @@ def clean_string(s):
     result = re.sub(r'\s{2,}', ' ', result)
     return result
 
-def transform_tx_year_make_model(s):
-    try:
-        result = (s.split(":")[1]).strip()
-    except Exception:
-        result = s
-
-    return result
-
-def transform_tx_plate(s):
-    try:
-        result = (s.split(":")[1]).strip()
-    except Exception:
-        result = s
-
-    return result
-
-def transform_co_owner(s):
-    try:
-        result = (s.split(":")[1]).strip()
-    except Exception:
-        result = s.copy()
-        pass
-
-    if result[-1:] == "/":
-        result = result[:-1]
-    
-    return clean_string(result)
-
 MAPPINGS = {}
 MAPPINGS["PUBLICDATA"] = {}
 MAPPINGS["PUBLICDATA"]["TX"] = [
-    {"path": "./disp_fld1", "attr": "owner_name", "transform": None},
-    {"path": "./disp_fld2", "attr": "year_make_model", "transform": transform_tx_year_make_model},
-    {"path": "./disp_fld3", "attr": "plate", "transform": transform_tx_plate},
-    {"path": "./disp_fld5", "attr": "prev_plate", "transform": None},
+    {"path": "./disp_fld1", "attr": "driver_name", "transform": clean_string},
+    {"path": "./disp_fld2", "attr": "dob", "transform": None},
     {"path": "./source", "attr": "data_source", "transform": None},
     {"path": ".", "prop": "db", "attr": "db", "transform": None},
     {"path": ".", "prop": "ed", "attr": "ed", "transform": None},
     {"path": ".", "prop": "rec", "attr": "rec", "transform": None}
 ]
 MAPPINGS["PUBLICDATA"]["CO"] = [
-    {"path": "./disp_fld1", "attr": "owner_name", "transform": transform_co_owner},
-    {"path": "./disp_fld2", "attr": "year_make_model", "transform": transform_tx_year_make_model},
+    {"path": "./disp_fld1", "attr": "owner_name", "transform": None},
+    {"path": "./disp_fld2", "attr": "year_make_model", "transform": None},
     {"path": "./source", "attr": "data_source", "transform": None},
     {"path": ".", "prop": "db", "attr": "db", "transform": None},
     {"path": ".", "prop": "ed", "attr": "ed", "transform": None},
     {"path": ".", "prop": "rec", "attr": "rec", "transform": None}
 ]
 
-class DmvSummary(BaseRecord):
+class DlSummary(BaseRecord):
     """
-    Department of Motor Vehicles record.
+    Driver's License record.
     """
     def __init__(self):
         """
         Initialize an instance.
         """
-        self.owner_name = None
-        self.vin = None
-        self.year_make_model = None
-        self.plate = None
-        self.prev_plate = None
+        self.driver_name = None
+        self.dob = None
+
         self.data_source = None
         self.db = None
         self.ed = None
@@ -89,8 +57,8 @@ class DmvSummary(BaseRecord):
         self.state = None
 
     def __str__(self):
-        return "Owner name: {} || VIN: {} || Year/MakeModel: {} || Plate: {} || Prev Plate: {} || Data Source: {} || Source: {} || State: {}" \
-            .format(self.owner_name, self.vin, self.year_make_model, self.plate, self.prev_plate, self.data_source, self.source, self.state)
+        return "Driver name: {} || DOB: {} || Source: {} || State: {}" \
+            .format(self.driver_name, self.dob, self.data_source, self.state)
 
     def from_xml(self, root, source:str, state:str):
         """

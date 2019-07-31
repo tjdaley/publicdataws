@@ -24,26 +24,26 @@
         <div class="col-md-4">
             <div class="row"><h3>Notices To</h3></div>
             <div class="row">
-                {{vehicle.notice_owner_name or ""}}
+                {{vehicle.notice_name or ""}}
             </div>
             <div class="row">
-                {{vehicle.notice_owner_street or ""}}
+                {{vehicle.notice_street or ""}}
             </div>
             <div class="row">
-                {{vehicle.notice_owner_city or ""}} {{vehicle.notice_owner_state or ""}} {{vehicle.notice_owner_zip or ""}}
+                {{vehicle.notice_city or ""}} {{vehicle.notice_state or ""}} {{vehicle.notice_zip or ""}}
             </div>
         </div>
     
         <div class="col-md-4">
             <div class="row"><h3>Previous Owner</h3></div>
             <div class="row">
-                {{vehicle.prev_owner_name}}
+                {{vehicle.prev_owner_name or ""}}
             </div>
             <div class="row">
                 {{vehicle.prev_owner_street or ""}}
             </div>
             <div class="row">
-                {{vehicle.prev_owner_city}}, {{vehicle.prev_owner_state}} {{vehicle.prev_owner_zip or ""}}
+                {{vehicle.prev_owner_city or ""}}, {{vehicle.prev_owner_state or ""}} {{vehicle.prev_owner_zip or ""}}
             </div>
         </div>
     </div>

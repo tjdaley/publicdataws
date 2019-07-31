@@ -92,19 +92,19 @@ class WebService(object):
             results.append(parcel)
         return results
 
-    def dmv_any(self, credentials, search_terms):
-        return self.__dmv(credentials, search_terms, "main")
+    def dmv_any(self, credentials, search_terms, us_state="tx"):
+        return self.__dmv(credentials, search_terms, "main", us_state)
 
-    def dmv_name(self, credentials, search_terms):
-        return self.__dmv(credentials, search_terms, "name")
+    def dmv_name(self, credentials, search_terms, us_state="tx"):
+        return self.__dmv(credentials, search_terms, "name", us_state)
 
-    def dmv_plate(self, credentials, search_terms):
-        return self.__dmv(credentials, search_terms, "plate")
+    def dmv_plate(self, credentials, search_terms, us_state="tx"):
+        return self.__dmv(credentials, search_terms, "plate", us_state)
 
-    def dmv_vin(self, credentials, search_terms):
-        return self.__dmv(credentials, search_terms, "vin")
+    def dmv_vin(self, credentials, search_terms, us_state="tx"):
+        return self.__dmv(credentials, search_terms, "vin", us_state)
 
-    def __dmv(self, credentials, search_terms, match_scope):
+    def __dmv(self, credentials, search_terms, match_scope, us_state="tx"):
         """
         Search DMV records.
 
@@ -120,7 +120,21 @@ class WebService(object):
                 message is an explanation of any error encountered; and car_summaries is a list
                 of DmvSummary instances.
         """
-        return self.public_data.dmv(credentials, search_terms, match_scope=match_scope)
+        return self.public_data.dmv(
+            credentials=credentials,
+            search_terms=search_terms,
+            match_scope=match_scope,
+            us_state=us_state)
+
+    def drivers_license(self, credentials:dict, search_terms:str, search_scope:str, us_state:str):
+        return self.public_data.drivers_license(
+            credentials,
+            search_terms=search_terms,
+            match_scope=search_scope,
+            us_state=us_state)
+
+    def driver_details(self, credentials:dict, db:str, ed:str, rec:str, us_state:str):
+        return self.public_data.driver_details(credentials, db, ed, rec, us_state)
 
     def dmv_details(self, credentials:dict, db:str, ed:str, rec:str, us_state:str):
         """

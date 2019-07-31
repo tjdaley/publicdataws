@@ -6,9 +6,18 @@ Copyright (c) 2019 by Thomas J. Daley, J.D.
 __author__ = "Thomas J. Daley, J.D."
 __version__ = "0.0.1"
 
+import re
 import xml.etree.ElementTree as ET
 
 from .baserecord import BaseRecord
+
+def clean_string(s):
+    # Remove punctuation
+    result = re.sub(r'[.,#!$%^&*;:{}=\-_`~()]', ' ', s)
+
+    # Remove any resulting multiple spaces
+    result = re.sub(r'\s{2,}', ' ', result)
+    return result
 
 MAPPINGS = {}
 MAPPINGS["PUBLICDATA"] = {}
@@ -40,6 +49,31 @@ MAPPINGS["PUBLICDATA"]["TX"] = [
     {"label": "Vehicle Minor Color[Color Group]", "attr": "other_color"},
     {"label": "VIN Number", "prop":"formattedvin", "attr": "vin"}
 ]
+MAPPINGS["PUBLICDATA"]["CO"] = [
+    {"label": "Owner 1", "attr": "owner_name", "transform": clean_string},
+    {"label": "Owner 2", "attr": "owner_name", "transform": clean_string},
+    {"label": "Owner 3", "attr": "owner_name", "transform": clean_string},
+    {"label": "Legal Address", "attr": "owner_street"},
+    {"label": "Legal City", "attr": "owner_city"},
+    {"label": "Legal State", "attr": "owner_state"},
+    {"label": "Legal ZIP Code", "attr": "owner_zip"},
+    {"label": "Mail Address", "attr": "notice_street"},
+    {"label": "Mail City", "attr": "notice_city"},
+    {"label": "Mail State", "attr": "notice_state"},
+    {"label": "Mail ZIP Code", "attr": "notice_zip"},
+    {"label": "Lic. Plate", "prop":"formattedplate", "attr": "plate"},
+    {"label": "Previous License Plate", "prop":"formattedplate", "attr": "prev_plate"},
+    {"label": "Tran. Date", "prop": "formatteddate", "attr": "title_date"},
+    {"label": "Purchase Date", "prop": "formatteddate", "attr": "sold_date"},
+    {"label": "Purchase Price", "attr": "sold_price"},
+    {"label": "Vehicle Year", "attr": "year"},
+    {"label": "Make", "attr": "make"},
+    {"label": "Model", "attr": "model"},
+    {"label": "Model Description", "attr": "model_desc"},
+    {"label": "Title Vehicle Type", "attr": "body_type"},
+    {"label": "Own. Tax Class", "attr": "class_code"},
+    {"label": "VIN", "attr": "vin"}
+]
 
 class DmvDetails(BaseRecord):
     """
@@ -61,11 +95,11 @@ class DmvDetails(BaseRecord):
         self.prev_owner_street = None
         self.prev_owner_zip = None
 
-        self.notice_owner_city = None
-        self.notice_owner_name = None
-        self.notice_owner_state = None
-        self.notice_owner_street = None
-        self.notice_owner_zip = None
+        self.notice_city = None
+        self.notice_name = None
+        self.notice_state = None
+        self.notice_street = None
+        self.notice_zip = None
 
         self.plate = None
         self.prev_plate = None
@@ -98,13 +132,13 @@ class DmvDetails(BaseRecord):
             source (str): Source database, e.g. "PUBLICDATA"
             state (str): U.S. State, e.g. "TX"
         """
-        if source not in MAPPINGS:
+        if source.upper() not in MAPPINGS:
             raise ValueError("No mappings for this source: {}".format(source))
 
-        if state not in MAPPINGS[source]:
+        if state.upper() not in MAPPINGS[source]:
             raise ValueError("No {} mappings for this state: {}".format(source, state))
 
-        mappings = MAPPINGS[source][state]
+        mappings = MAPPINGS[source.upper()][state.upper()]
 
         # ET.dump(root)
 
@@ -119,8 +153,16 @@ class DmvDetails(BaseRecord):
                     value = elem[0].text
 
                 #print("\tfound:", value)
-
                 if value:
+                    # See if we need to transform the data in any way.
+                    if "transform" in mapping and mapping["transform"]:
+                        value  = mapping["transform"](value)
+
+                    # If the target attribute already has a value, append this value
+                    # to the existing value.
+                    if getattr(self, mapping["attr"]):
+                        existing_value = getattr(self, mapping["attr"])
+                        value = existing_value + " / " + value
                     setattr(self, mapping["attr"], value)
             else:
                 #print("\tnot found")

@@ -1,0 +1,23 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Matching Vehicles</h1>
+    <ul class="list-group">
+        {% for driver in drivers %}
+            <li class="list-group-item">
+                <a href="/driver/{{driver.db}}/{{driver.ed}}/{{driver.rec}}/{{driver.state}}/">{{driver.driver_name}}</a>
+                <div><small class="text-muted">{{driver.dob}}</small></div>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}
+
+<!--
+    self.driver_name = None
+    self.dob = None
+    self.data_source = None
+    self.db = None
+    self.ed = None
+    self.rec = None
+    self.source = None
+    self.state = None
+-->
