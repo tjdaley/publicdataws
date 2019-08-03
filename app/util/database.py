@@ -54,7 +54,7 @@ class Database(object):
             success = True
         except Exception as e:
             self.logger.error("Error connecting to database: %s", e)
-        
+
         return success
 
     def test_connection(self)->bool:
@@ -82,7 +82,7 @@ class Database(object):
             source (str): Source that was queried, e.g. "PUBLICDATA"
             query (str): The query that was submitted, e.g. the URL
             result (object): The result was received. Will be searialzed to a string.
-        
+
         Returns:
             (bool): True if successful, otherwise False
         """
@@ -158,7 +158,7 @@ class Database(object):
             return (result_type, serialized_result)
         except Exception as e:
             self.logger.error("Error serializing %s: %s", result_type, e)
-        
+
         return (None, None)
 
     def reconstitute_cached_response(self, document)->object:
@@ -167,13 +167,13 @@ class Database(object):
 
         Args:
             document (): MongoDB document containing search result.
-        
+
         Returns:
             (object): Search result reconstituted to its original form.
         """
 
         result_type = "[result_type not in document]"
-        
+
         try:
             result_type = document["result_type"]
             serialized_result = document["result"]
@@ -199,6 +199,9 @@ class Database(object):
     def add_user(self, fields:dict)->bool:
         """
         """
+        if "email" in fields:
+            fields["email"] = fields["email"].lower()
+
         record = record_from_dict(fields)
         filter = {"email": fields["email"]}
         document = self.dbconn[USER_TABLE].find_one(filter)
@@ -212,7 +215,10 @@ class Database(object):
     def get_user(self, fields:dict)->dict:
         """
         """
-        filter = fields
+        filter = fields.copy()
+        if "email" in filter:
+            filter["email"] = filter["email"].lower()
+
         document = self.dbconn[USER_TABLE].find_one(filter)
         return document
 
@@ -241,7 +247,7 @@ def record_from_dict(fields:dict)->dict:
 
     Args:
         fields (dict): Dict of fields to add to the record.
-    
+
     Returns:
         (dict): Standardized record.
     """
