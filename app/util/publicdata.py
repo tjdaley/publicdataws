@@ -19,6 +19,7 @@ from .database import Database
 from .logger import Logger
 
 from .classes.dmvdetails import DmvDetails
+from .classes.dmv_lienholder import DmvLienHolder
 from .classes.dmvsummary import DmvSummary
 from .classes.dlsummary import DlSummary
 from .classes.dldetails import DlDetails
@@ -471,6 +472,11 @@ class PublicData(object):
             fields = root.findall("./dataset/dataitem/textdata")
             details = DmvDetails()
             details.from_xml(fields[0], SOURCE, us_state)
+            lien_holders = root.findall("./dataset/dataitem/dataset[@label='Lien Holders']")
+            for lien in lien_holders:
+                lien_holder = DmvLienHolder()
+                lien_holder.from_xml(lien, SOURCE, us_state)
+                details.lien_holders.append(lien_holder)
 
         return (success, message, details)
 

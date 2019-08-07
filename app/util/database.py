@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import json
 import pickle
 import xml.etree.ElementTree as ET
+import xml.dom.minidom as MD
 import time
 
 from pymongo import MongoClient
@@ -231,7 +232,10 @@ class Database(object):
             return None
         
         result = self.reconstitute_cached_response(document)
-        return str(ET.tostring(result.getroot()))
+        rough_string = ET.tostring(result.getroot(), 'utf-8')
+        reparsed = MD.parseString(rough_string)
+        return reparsed.toprettyxml(indent="   ")
+        #return str(ET.tostring(result.getroot()))
 
     def add_case(self, fields:dict)->bool:
         """

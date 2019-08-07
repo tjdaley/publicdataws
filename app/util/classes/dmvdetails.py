@@ -118,6 +118,10 @@ class DmvDetails(BaseRecord):
         self.main_color = None
         self.other_color = None
 
+        self.lien_holders = []
+        self.amortization_schedule = None
+        self.amortization_message = None
+
     def __str__(self):
         return "{} {} {} {} {}".format(
             self.owner_name, self.owner_street, self.owner_city, self.owner_state, self.owner_zip

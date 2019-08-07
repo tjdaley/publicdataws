@@ -149,7 +149,18 @@ class WebService(object):
         Returns:
             (success, message, object)
         """
-        return self.public_data.dmv_details(credentials, db, ed, rec, us_state)
+        (success, message, details) = self.public_data.dmv_details(credentials, db, ed, rec, us_state)
+        if not success:
+            return (success, message, details)
+
+        amort_details = {
+            "year": details.year,
+            "sold_price": details.sold_price,
+            "title_date": details.title_date,
+            "sold_date": details.sold_date
+        }
+        (details.amortization_schedule, details.amortization_message) = self.amortization_schedule(amort_details)
+        return (True, message, details)
 
     def amortization_schedule(self, details:dict, normal_useful_life:int=15)->(list, str):
         """

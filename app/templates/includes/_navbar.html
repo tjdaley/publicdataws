@@ -21,7 +21,7 @@
           <div class="dropdown-menu" aria-labelledby="dropdown01">
             <a class="dropdown-item" href="/search/dl">Driver's License</a>
             <a class="dropdown-item" href="/search/dmv">Motor Vehicles</a>
-            <a class="dropdown-item" href="/search/rp">Real Property</a>
+            {% if session.is_admin %}<a class="dropdown-item" href="/search/rp">Real Property</a>{% endif %}
             {% if session.is_admin %}<a class="dropdown-item" href="/queries">Cached Queries</a>{% endif %}
           </div>
         </li>
