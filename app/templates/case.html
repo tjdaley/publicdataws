@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Case</h1>
+    {% from "includes/_formhelpers.html" import render_field %}
+    <form method="POST">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    {{render_field(form.cause_number, class_="form-control")}}
+                </div>
+                <div class="form-group">
+                    {{render_field(form.description, class_="form-control")}}
+                </div>
+                <div class="form-group">
+                    {{render_field(form.case_type, class_="form-control")}}
+                </div>
+                <div class="form-group">
+                    {{render_field(form.us_state, class_="form-control")}}
+                </div>
+                <div class="form-group">
+                    {{render_field(form.county, class_="form-control")}}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    {{render_field(form.created_by, class_="form-control")}}
+                </div>
+                <div class="form-group">
+                    {{render_field(form.time_str, class_="form-control")}}
+                </div>
+            </div>
+        </div>
+            
+        <p><input type="submit" class="btn btn-primary" value="Submit"></p>
+    </form>
+{% endblock %}

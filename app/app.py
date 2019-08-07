@@ -13,9 +13,6 @@ from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
 from functools import wraps
 
-from data import Articles
-ARTICLES = Articles()
-
 from webservice import WebService
 WEBSERVICE = None
 
@@ -33,6 +30,17 @@ def is_logged_in(f):
             return f(*args, **kwargs)
         else:
             flash("Unauthorized - Please Log In", "danger")
+            return redirect(url_for("login"))
+    return wrap
+
+# Decorator to check if user is an administrator
+def is_admin_user(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if session['is_admin']:
+            return f(*args, **kwargs)
+        else:
+            flash("Unauthorized - Please Log In As An Administrator", "danger")
             return redirect(url_for("login"))
     return wrap
 
@@ -105,6 +113,8 @@ def search_drivers(search_type, search_terms, search_state):
         
         flash("Found {} matching drivers.".format(len(results)), "success")
         return render_template('drivers.html', drivers=results)
+
+    form = request.query()
     return render_template("search_error.html", formvariables=form, operation="Search: DL", message=message)
 
 @app.route('/search/dl_address', methods=['GET'])
@@ -197,13 +207,59 @@ def vehicle_details(db, ed, rec, state):
 def search_rp_get():
     return render_template('search_rp.html')
 
-@app.route('/articles', methods=['GET'])
-def articles():
-    return render_template('articles.html', articles=ARTICLES)
+class AddCaseForm(Form):
+    cause_number = StringField("Cause number", [validators.DataRequired(), validators.Length(min=1, max=50)])
+    description = StringField("Description", [validators.DataRequired(), validators.Length(min=1, max=50)])
+    us_state = StringField("State", [validators.Length(min=2, max=2)])
+    county = StringField("County", [validators.Length(min=0, max=50)])
+    case_type = StringField("Case type", [validators.Length(min=0, max=50)])
+    created_by = StringField("Created by")
+    time_str = StringField("Create date")
 
-@app.route('/article/<string:id>/', methods=['GET'])
-def article(id):
-    return render_template('article.html', id=id)
+@app.route('/case/add/', methods=['GET', 'POST'])
+@is_logged_in
+def add_case():
+    form = AddCaseForm(request.form)
+
+    if request.method == 'POST' and form.validate():
+        fields = request.form
+        myfields = {key:value for (key, value) in fields.items()}
+        myfields["email"] = session["email"]
+        myfields["created_by"] = session["email"]
+        success = DATABASE.add_case(myfields)
+        if success:
+            flash("Case {} added.".format(myfields["cause_number"]), 'success')
+            return redirect(url_for('list_cases'))
+        flash("Failed to add case. Check log for explanation.", "danger")
+        return redirect(url_for("add_case"))
+
+    return render_template('case.html', form=form)
+
+@app.route('/case/<string:id>/', methods=['GET', 'POST'])
+@is_logged_in
+def get_case(id):
+    if request.method == 'POST':
+        fields = request.form
+        myfields = {key:value for (key, value) in fields.items()}
+        myfields['_id'] = id
+        myfields['email'] = session['email']
+        result = DATABASE.update_case(myfields)
+        if result:
+            return redirect(url_for('list_cases'))
+        flash("Failed to update case. Check log for explanation.", "danger")
+        return redirect(url_for('list_cases'))
+    
+    # Show the case on a GET request
+    case = DATABASE.get_case({"_id": id, "email": session["email"]})
+    myfields = {key:value for (key, value) in case.items()}
+    form = AddCaseForm(**myfields)
+    return render_template("case.html", form=form)
+
+@app.route('/cases', methods=['GET'])
+@is_logged_in
+def list_cases():
+    cases = DATABASE.get_cases({"email": session["email"]})
+    return render_template('cases.html', cases=cases)
 
 class RegisterForm(Form):
     name = StringField("Name", [validators.DataRequired(), validators.Length(min=1, max=50)])
@@ -217,6 +273,20 @@ class RegisterForm(Form):
     pd_password = StringField("Public Data password", validators=[validators.DataRequired()])
     zillow_key = StringField("Zillow API key", validators=[validators.DataRequired()])
 
+@app.route("/queries", methods=['GET'])
+@is_logged_in
+@is_admin_user
+def list_query_cache():
+    queries = DATABASE.get_query_cache(50)
+    return render_template("queries.html", queries=queries)
+
+@app.route("/query/<string:id>/", methods=['GET'])
+@is_logged_in
+@is_admin_user
+def show_query(id):
+    result = DATABASE.get_query_cache_item_result(id)
+    return render_template("query_result.html", result=result)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm(request.form)
@@ -225,6 +295,7 @@ def register():
         fields = request.form
         myfields = {key:value for (key, value) in fields.items()}
         myfields["password"] = sha256_crypt.hash(str(fields["password"]))
+        del myfields["confirm"] # saving that to the db defeats the purpose of encryption
         success = DATABASE.add_user(myfields)
         if success:
             flash("Your registration has been saved--Please login.", 'success')
@@ -299,6 +370,7 @@ def login():
             session['pd_username'] = result['pd_username']
             session['pd_password'] = result['pd_password']
             session['zillow_key'] = result['zillow_key']
+            session['is_admin'] = "admin" in result and result["admin"] == "Y"
             return render_template("home.html", msg=message)
 
         # No, passwords do not match

@@ -1,0 +1,18 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1><a href="/case/add/"><i class="fas fa-plus-circle fa-1x"></i></a>Cases</h1>
+    <ul class="list-group">
+        {% for case in cases %}
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="case/{{case._id}}">{{case.cause_number}}</a>
+                    </div>
+                    <div class="col-md-9">
+                        {{case.description}}
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

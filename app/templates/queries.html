@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Most Recent Queries</h1>
+    <ul class="list-group">
+        {% for query in queries %}
+            <li class="list-group-item">
+                <a href="/query/{{query._id}}/">{{query.query}}</a>
+                <div><small class="text-muted">{{query.time_str}} // {{query.source}}</small></div>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}
