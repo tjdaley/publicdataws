@@ -110,16 +110,21 @@
         <div class="col-md-8">
             <div class="row"><h3>Value Schedule</h3></div>
             <div class="row">{{vehicle.amortization_message}}</div>
-            <table class="table">
-                <tr><th>Year</th><th>Beginning Value</th><th>Depreciation</th><th>Ending Value</th></tr>
+            <table class="table table-hover table-striped table-sm">
+                <caption>Depreciation Schedule</caption>
+                <thead>
+                    <tr><th>Year</th><th>Beginning Value</th><th>Depreciation</th><th>Ending Value</th></tr>
+                </thead>
+                <tbody>
             {% for line in vehicle.amortization_schedule %}
-                <div class="row">
-                    <tr><td>{{line.year}}</td>
-                        <td>{{ "${:,.2f}".format(line.begin_value)}}</td>
-                        <td>{{ "(${:,.2f})".format(line.depreciation)}}</td>
-                        <td>{{ "${:,.2f}".format(line.end_value)}}</td></tr>
-                </div>
+                    <div class="row">
+                        <tr><td>{{line.year}}</td>
+                            <td>{{ "${:,.2f}".format(line.begin_value)}}</td>
+                            <td>{{ "(${:,.2f})".format(line.depreciation)}}</td>
+                            <td>{{ "${:,.2f}".format(line.end_value)}}</td></tr>
+                    </div>
             {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>
