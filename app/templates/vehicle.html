@@ -52,45 +52,49 @@
 
     <div class="row mb-3">
         <div class="col-md-4">
-            <div class="row"><small class="muted">VIN</small></div>
+            <div class="row"><small class="font-weight-bold">VIN</small></div>
             <div class="row">{{vehicle.vin or ""}}</div>
         </div>
         <div class="col-md-4">
-            <div class="row"><small class="muted">Plate</small></div>
+            <div class="row"><small class="font-weight-bold">Plate</small></div>
             <div class="row">{{vehicle.plate or ""}}</div>
         </div>
         <div class="col-md-4">
-            <div class="row"><small class="muted">Prev Plate</small></div>
+            <div class="row"><small class="font-weight-bold">Prev Plate</small></div>
             <div class="row">{{vehicle.prev_plate or ""}}</div>
         </div>
     </div>
 
     <div class="row mb-3">
         <div class="col-md-4">
-            <div class="row"><small class="muted">Title Date</small></div>
+            <div class="row"><small class="font-weight-bold">Title Date</small></div>
             <div class="row">{{vehicle.title_date or ""}}</div>
         </div>
         <div class="col-md-4">
-            <div class="row"><small class="muted">Sold Date</small></div>
+            <div class="row"><small class="font-weight-bold">Sold Date</small></div>
             <div class="row">{{vehicle.sold_date or ""}}</div>
         </div>
         <div class="col-md-4">
-            <div class="row"><small class="muted">Sold Price</small></div>
-            <div class="row">{{vehicle.sold_price or "(unknown)"}}</div>
+            <div class="row"><small class="font-weight-bold">Sold Price</small></div>
+            {% if vehicle.sold_price %}
+            <div class="row">{{"${:,.2f}".format(vehicle.sold_price)}}</div>
+            {% else %}
+            <div class="row">(unknown)</div>
+            {% endif %}
         </div>
     </div>
 
     <div class="row mb-3">
         <div class="col-md-4">
-            <div class="row"><small class="muted">Body Type</small></div>
+            <div class="row"><small class="font-weight-bold">Body Type</small></div>
             <div class="row">{{vehicle.body_type or "(unknown)"}}</div>
         </div>
         <div class="col-md-4">
-            <div class="row"><small class="muted">Vehicle Class</small></div>
+            <div class="row"><small class="font-weight-bold">Vehicle Class</small></div>
             <div class="row">{{vehicle.class_code or "(unknown)"}}</div>
         </div>
         <div class="col-md-4">
-            <div class="row"><small class="muted">Color(s)</small></div>
+            <div class="row"><small class="font-weight-bold">Color(s)</small></div>
             <div class="row">{{vehicle.main_color or ""}} / {{vehicle.other_color or ""}}</div>
         </div>
     </div>

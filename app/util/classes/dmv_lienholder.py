@@ -103,7 +103,7 @@ class DmvLienHolder(BaseRecord):
 
         for mapping in mappings:
             path = mapping["path"]
-            print("looking for", path)
+            #print("looking for", path)
             elem = root.findall(path)
             if elem:
                 if "prop" in mapping:
@@ -111,7 +111,7 @@ class DmvLienHolder(BaseRecord):
                 else:
                     value = elem[0].text
 
-                print("\tfound:", value)
+                #print("\tfound:", value)
                 if value:
                     # See if we need to transform the data in any way.
                     if "transform" in mapping and mapping["transform"]:
@@ -124,5 +124,5 @@ class DmvLienHolder(BaseRecord):
                         value = existing_value + " " + value
                     setattr(self, mapping["attr"], value)
             else:
-                print("\tnot found")
+                #print("\tnot found")
                 pass

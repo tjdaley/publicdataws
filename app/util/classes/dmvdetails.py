@@ -19,6 +19,15 @@ def clean_string(s):
     result = re.sub(r'\s{2,}', ' ', result)
     return result
 
+def money(s):
+    try:
+        result = float(s) / 100
+    except Exception as e:
+        print("Error converting", s, str(e))
+        result = s
+
+    return result
+
 MAPPINGS = {}
 MAPPINGS["PUBLICDATA"] = {}
 MAPPINGS["PUBLICDATA"]["TX"] = [
@@ -38,7 +47,7 @@ MAPPINGS["PUBLICDATA"]["TX"] = [
     {"label": "Previous License Plate Number", "prop":"formattedplate", "attr": "prev_plate"},
     {"label": "Title Date", "prop": "formatteddate", "attr": "title_date"},
     {"label": "Vehicle Sold Date", "attr": "sold_date"},
-    {"label": "Vehicle Sales Price", "attr": "sold_price"},
+    {"label": "Vehicle Sales Price", "attr": "sold_price", "transform": money},
     {"label": "Model Year", "attr": "year"},
     {"label": "Make", "attr": "make"},
     {"label": "Model", "attr": "model"},
@@ -67,7 +76,7 @@ MAPPINGS["PUBLICDATA"]["CO"] = [
     {"label": "Purchase Date", "prop": "formatteddate", "attr": "sold_date"},
     {"label": "Purchase Price", "attr": "sold_price"},
     {"label": "Vehicle Year", "attr": "year"},
-    {"label": "Make", "attr": "make"},
+    {"label": "Make", "attr": "make", "transform": money},
     {"label": "Model", "attr": "model"},
     {"label": "Model Description", "attr": "model_desc"},
     {"label": "Title Vehicle Type", "attr": "body_type"},

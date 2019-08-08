@@ -103,7 +103,7 @@ class PublicData(object):
                 response = self.database.check_cache(SOURCE, url)
                 if response:
                     self.logger.debug("Loading from cache.")
-                    print(ET.dump(response))
+                    #print(ET.dump(response))
                     return (True, "OK", response)
 
             self.logger.debug("Loading from URL.")
@@ -113,7 +113,7 @@ class PublicData(object):
 
             # Convert response from stream of bytes to string
             content = response.content.decode()
-            print(content)
+            #print(content)
 
             # Deserialize response to XML element tree
             tree = ET.ElementTree(ET.fromstring(content))

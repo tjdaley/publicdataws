@@ -185,13 +185,13 @@ class WebService(object):
         except KeyError as e:
             return ([], "Cannot depreciate an asset with no model year (1).")
         except AttributeError as e:
-            return ([], "Cannot depreciate an asset wtih no model year (2).")
+            return ([], "Cannot depreciate an asset with no model year (2).")
         except ValueError as e:
             return ([], "Invalid year: {}".format(str(e)))
         
         try:
-            original_value = float(details["sold_price"])/100.00
-            start_value = float(details["sold_price"])/100.00
+            original_value = int(details["sold_price"])
+            start_value = int(details["sold_price"])
         except KeyError as e:
             return([], "Cannot depreciate an asset with no purchase price.")
 
