@@ -88,6 +88,8 @@ class DmvSummary(BaseRecord):
         self.source = None
         self.state = None
 
+        self.case_status = None # (I)ncluded, e(X)cluded, or None
+
     def __str__(self):
         return "Owner name: {} || VIN: {} || Year/MakeModel: {} || Plate: {} || Prev Plate: {} || Data Source: {} || Source: {} || State: {}" \
             .format(self.owner_name, self.vin, self.year_make_model, self.plate, self.prev_plate, self.data_source, self.source, self.state)

@@ -237,6 +237,21 @@ class Database(object):
         return reparsed.toprettyxml(indent="   ")
         #return str(ET.tostring(result.getroot()))
 
+    def get_user_id_for_email(self, email:str)->ObjectId:
+        """
+        Return the _id field for the user identified by the given email address.
+
+        Args:
+            email (str): Email address to search.
+
+        Returns:
+            (ObjectId): ID of the user we found or None if not found.
+        """
+        user_doc = self.get_user({"email": email})
+        if user_doc:
+            return user_doc["_id"]
+        return None
+
     def add_case(self, fields:dict)->bool:
         """
         Add a case to the database.
@@ -252,14 +267,13 @@ class Database(object):
 
         # Lookup the user to get the user's ID
         my_email = fields["email"].lower()
-        user_doc = self.get_user({"email": my_email})
-
-        if not user_doc:
-            self.logger.error("Add Case: User not found for email '%s'.", my_email)
+        user_id = self.get_user_id_for_email(my_email)
+        if not user_id:
+            self.logger.error("database.add_case(): Email not found: '%s'", my_email)
             return False
 
         # Normalize any fields before saving.
-        record['user_id'] = user_doc["_id"]
+        record['user_id'] = user_id
         record['cause_number'] = record['cause_number'].upper()
 
         # Create filter of unique field value combinations
@@ -282,14 +296,15 @@ class Database(object):
 
         # Lookup the user to get the user's ID
         my_email = fields["email"].lower()
-        user_doc = self.get_user({"email": my_email})
-        if not user_doc:
+        user_id = self.get_user_id_for_email(my_email)
+        if not user_id:
+            self.logger.error("database.get_case(): Email not found: '%s'", my_email)
             return {}
 
         # Create lookup filter
         filter = {}
         filter['_id'] = ObjectId(fields['_id'])
-        filter['user_id'] = user_doc["_id"]
+        filter['user_id'] = user_id
 
         # Locate matching record
         document = self.dbconn[CASE_TABLE].find_one(filter)
@@ -307,11 +322,12 @@ class Database(object):
 
         # Lookup the user to get the user's ID
         my_email = fields["email"].lower()
-        user_doc = self.get_user({"email": my_email})
-        if not user_doc:
+        user_id = self.get_user_id_for_email(my_email)
+        if not user_id:
+            self.logger.error("database.get_cases(): Email not found: '%s'", my_email)
             return {}
 
-        filter = {'user_id': user_doc["_id"]}
+        filter = {'user_id': user_id}
 
         # Locate matching records
         documents = self.dbconn[CASE_TABLE].find(filter)
@@ -328,13 +344,14 @@ class Database(object):
 
         # Lookup the user to get the user's ID
         my_email = fields["email"].lower()
-        user_doc = self.get_user({"email": my_email})
-        if not user_doc:
-            return {}
+        user_id = self.get_user_id_for_email(my_email)
+        if not user_id:
+            self.logger.error("database.update_case(): Email not found: '%s'", my_email)
+            return False
 
         # Create lookup filter
         filter = {
-            "user_id": user_doc["_id"],
+            "user_id": user_id,
             "_id": ObjectId(fields["_id"])
             }
 
@@ -362,19 +379,85 @@ class Database(object):
 
         # Lookup the user to get the user's ID
         my_email = fields["email"].lower()
-        user_doc = self.get_user({"email": my_email})
-        if not user_doc:
-            return {}
+        user_id = self.get_user_id_for_email(my_email)
+        if not user_id:
+            self.logger.error("database.del_case(): Email not found: '%s'", my_email)
+            return False
 
         # Create lookup filter
         filter = {
-            "user_id": user_doc["_id"],
+            "user_id": user_id,
             "cause_number": fields["cause_number"].upper()
             }
 
         # Delete the case, if we can find it.
         mongo_result = self.dbconn[CASE_TABLE].remove(filter, {"justOne": True})
         return mongo_result["nRemoved"] == 1
+
+    def add_to_case(self, email:str, case_id:str, category:str, key:str, fields:dict)->bool:
+        """
+        Add an item, such as property or a person, to a case record.
+
+        Args:
+            email (str): Email address of person trying to add
+            case_id (str): String version of _id field of case to be added to.
+            category (str): Category name. Can optionally contain a subcategory delimited by
+                a colon (":"). E.G. "PROPERTY:VEHICLE", "PROPERTY:REAL", "PROPERTY:BANK_ACCOUNT"
+            key (str): Application-generated key for this item, e.g., for Public Data it could
+                take the form PUBLICDATA:<db>:<ed>:<rec>
+            fields (dict): Property values for this item.
+
+        Returns:
+            (bool): True if successful, otherwise False
+        """
+
+        # Get user_id for the given email
+        user_id = self.get_user_id_for_email(email)
+        if not user_id:
+            self.logger.error("database.add_to_case(): Email not found: '%s'", email)
+            return False
+        
+        # Get make sure this user owns the case.
+        my_case_id = ObjectId(case_id)
+        filter = {
+            "_id": my_case_id,
+            "user_id": user_id
+        }
+        case_doc = self.dbconn[CASE_TABLE].find_one(filter)
+        if not case_doc:
+            self.logger.error("database.add_to_case(): Case '%s' not found for '%s'", case_id, email)
+            return False
+
+        # Create item collection to add to, if not already there.
+        (main_cat, sub_cat) = category.split(":", 2)
+        if main_cat not in case_doc:
+            case_doc[main_cat] = {}
+
+        if sub_cat and sub_cat not in case_doc[main_cat]:
+            case_doc[main_cat][sub_cat] = {}
+
+        # Now insert or update the correspding key into the case document.
+        subrecord = record_from_dict(fields)
+        if not sub_cat:
+            case_doc[main_cat][key] = subrecord
+        else:
+            case_doc[main_cat][sub_cat][key] = subrecord
+
+        # Finally, save the updated case document.
+        # Create local copy of fields
+        new_vals = {key:value for key, value in case_doc.items() if key not in ['_id', 'user_id']}
+
+        # Remove columns that can't be updated
+        #for key in ['_id', 'user_id']:
+        #    if key in new_vals:
+        #        del(new_vals[key])
+
+        # Add update times
+        new_vals.update(base_record())
+
+        # Locate and update the matching record
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
+        return mongo_result.modified_count == 1
 
     def add_user(self, fields:dict)->bool:
         """
@@ -387,6 +470,7 @@ class Database(object):
         document = self.dbconn[USER_TABLE].find_one(filter)
 
         if document:
+            self.logger.error("database.add_user(): email '%s' already exists.", fields['email'])
             return False
 
         mongo_result = self.dbconn[USER_TABLE].replace_one(filter, record, upsert=True)

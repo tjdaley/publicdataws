@@ -8,7 +8,7 @@ __version__ = "0.0.1"
 
 import argparse
 import random
-from flask import Flask, render_template, request, flash, redirect, url_for, session, logging
+from flask import Flask, render_template, request, flash, redirect, url_for, session, logging, make_response, jsonify
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 from passlib.hash import sha256_crypt
 from functools import wraps
@@ -260,6 +260,17 @@ def get_case(id):
 def list_cases():
     cases = DATABASE.get_cases({"email": session["email"]})
     return render_template('cases.html', cases=cases)
+
+@app.route('/case/add_item/', methods=['POST'])
+@is_logged_in
+def add_case_item():
+    fields = request.form
+    item = {key:value for (key, value) in fields.items() if key not in ['case_id', 'category', 'key']}
+    case_id = fields['case_id']
+    category = fields['category']
+    key = fields['key']
+    success = DATABASE.add_to_case(session['email'], case_id, category, key, item)
+    return jsonify({"success": success, "message": "Nothing to say."})
 
 class RegisterForm(Form):
     name = StringField("Name", [validators.DataRequired(), validators.Length(min=1, max=50)])

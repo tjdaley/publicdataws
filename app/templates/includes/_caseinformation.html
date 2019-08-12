@@ -1,0 +1,7 @@
+{% if session.logged_in %}
+<div class="container-fluid text-center bg-info" id="case_information">
+    <small>ACTIVE CASE: </small>
+    <small rv-text="data.case.description"></small> (<small rv-text="data.case.cause_number"></small>)
+</div>
+{% endif %}
+  

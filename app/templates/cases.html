@@ -5,11 +5,20 @@
         {% for case in cases %}
             <li class="list-group-item">
                 <div class="row">
-                    <div class="col-md-3">
-                        <a href="case/{{case._id}}">{{case.cause_number}}</a>
+                    <div class="col-md-2">
+                        <button
+                            type="button"
+                            data-cause-number="{{case.cause_number}}"
+                            data-description="{{case.description}}"
+                            data-id="{{case._id}}"
+                            rv-on-click="controller.setCase"
+                            class="btn btn-outline-primary btn-sm">Activate</button>
                     </div>
-                    <div class="col-md-9">
-                        {{case.description}}
+                    <div class="col-md-3">
+                        <a href="case/{{case._id}}" class="align-middle">{{case.cause_number}}</a>
+                    </div>
+                    <div class="col-md-7">
+                        <span class="align-middle">{{case.description}}</span>
                     </div>
                 </div>
             </li>
