@@ -436,7 +436,7 @@ class Database(object):
         if sub_cat and sub_cat not in case_doc[main_cat]:
             case_doc[main_cat][sub_cat] = {}
 
-        # Now insert or update the correspding key into the case document.
+        # Now insert or update the corresponding key into the case document.
         subrecord = record_from_dict(fields)
         if not sub_cat:
             case_doc[main_cat][key] = subrecord
@@ -458,6 +458,113 @@ class Database(object):
         # Locate and update the matching record
         mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
         return mongo_result.modified_count == 1
+
+    def del_from_case(self, email:str, case_id:str, category:str, key:str, fields:dict)->bool:
+        """
+        Delete an item, such as property or a person, from a case record.
+
+        Args:
+            email (str): Email address of person trying to add
+            case_id (str): String version of _id field of case to be added to.
+            category (str): Category name. Can optionally contain a subcategory delimited by
+                a colon (":"). E.G. "PROPERTY:VEHICLE", "PROPERTY:REAL", "PROPERTY:BANK_ACCOUNT"
+            key (str): Application-generated key for this item, e.g., for Public Data it could
+                take the form PUBLICDATA:<db>:<ed>:<rec>
+            fields (dict): Property values for this item.
+
+        Returns:
+            (bool): True if successful, otherwise False
+        """
+
+        # Get user_id for the given email
+        user_id = self.get_user_id_for_email(email)
+        if not user_id:
+            self.logger.error("database.del_from_case(): Email not found: '%s'", email)
+            return False
+        
+        # Get make sure this user owns the case.
+        my_case_id = ObjectId(case_id)
+        filter = {
+            "_id": my_case_id,
+            "user_id": user_id
+        }
+        case_doc = self.dbconn[CASE_TABLE].find_one(filter)
+        if not case_doc:
+            self.logger.error("database.del_from_case(): Case '%s' not found for '%s'", case_id, email)
+            return False
+
+        # See if item collection exists. Return True if the collection does not exist
+        # because there is nothing to delete.
+        (main_cat, sub_cat) = category.split(":", 2)
+        if main_cat not in case_doc:
+            return True
+
+        if sub_cat and sub_cat not in case_doc[main_cat]:
+            return True
+
+        # Now remove the corresponding key into the case document.
+        try:
+            if not sub_cat:
+                del case_doc[main_cat][key]
+            else:
+                del case_doc[main_cat][sub_cat][key]
+        except KeyError:
+            return True # It's already gone.
+
+        # Finally, save the updated case document.
+        # Create local copy of fields
+        new_vals = {key:value for key, value in case_doc.items() if key not in ['_id', 'user_id']}
+
+        # Add update times
+        new_vals.update(base_record())
+
+        # Locate and update the matching record
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
+        return mongo_result.modified_count == 1
+
+    def get_case_items(self, email:str, case_id:str, category:str)->list:
+        """
+        Get a list of case items by category, e.g. "PROPERTY" or "PROPERTY:VEHICLE"
+
+        Args:
+            email (str): Email of person requesting access.
+            case_id (str): _id of record in cases collection.
+            category (str): Category name. Can optionally contain a subcategory delimited by
+                a colon (":"). E.G. "PROPERTY:VEHICLE", "PROPERTY:REAL", "PROPERTY:BANK_ACCOUNT"
+
+        Returns:
+            (list): List of items found, or empty list if nothing found.
+        """
+        # Get user_id for the given email
+        user_id = self.get_user_id_for_email(email)
+        if not user_id:
+            self.logger.error("database.get_case_items(): Email not found: '%s'", email)
+            return False
+        
+        # Get make sure this user owns the case.
+        my_case_id = ObjectId(case_id)
+        filter = {
+            "_id": my_case_id,
+            "user_id": user_id
+        }
+        case_doc = self.dbconn[CASE_TABLE].find_one(filter)
+        if not case_doc:
+            self.logger.error("database.get_case_items(): Case '%s' not found for '%s'", case_id, email)
+            return False
+
+        # Split the category
+        (main_cat, sub_cat) = category.split(":", 2)
+        if main_cat not in case_doc:
+            return []
+
+        if sub_cat and sub_cat not in case_doc[main_cat]:
+            return []
+
+        # Return the requested items
+        if sub_cat:
+            return case_doc[main_cat][sub_cat]
+
+        return case_doc[main_cat]
 
     def add_user(self, fields:dict)->bool:
         """

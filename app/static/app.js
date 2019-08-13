@@ -5,17 +5,53 @@ var controller = {
     {
         let my_case = rivets_binding.data.case;
         let button = event.target;
+
+        // Get button's custom attributes
         let cause_number = button.getAttribute("data-cause-number");
         let description = button.getAttribute("data-description");
         let id = event.target.getAttribute("data-id");
-        console.log(id);
+
+        // Update the data model
         my_case.cause_number = cause_number;
         my_case.description = description;
         my_case.id = id;
 
+        // Update local storage
         sessionStorage.setItem("cause_number", cause_number);
         sessionStorage.setItem("case_description", description);
         sessionStorage.setItem("case_id", id);
+    },
+
+    deleteVehicleFromCase: function (event, rivets_binding)
+    {
+        let button = event.target;
+        let db = button.getAttribute("data-db");
+        let ed = button.getAttribute("data-ed");
+        let rec = button.getAttribute("data-rec");
+        let case_id = rivets_binding.data.case.id;
+
+        let payload = {
+            db: db,
+            ed: ed,
+            rec: rec,
+            case_id: case_id,
+            category: "PROPERTY:VEHICLE",
+            key: `PUBLICDATA:${db}.${ed}.${rec}`};
+        console.log(payload);
+        $.ajax(
+        {
+            method: "POST",
+            url: "/case/del_item/",
+            data: payload
+        })
+        .done(function( msg ) 
+        {
+            console.log(msg);
+            if (msg.success)
+            {
+                document.location.reload(true);
+            }
+        });
     },
 
     addVehicleToCase: function (event, rivets_binding)
@@ -43,6 +79,10 @@ var controller = {
         .done(function( msg ) 
         {
             console.log(msg);
+            if (msg.success)
+            {
+                document.location.reload(true);
+            }
         });
     },
 };
@@ -104,7 +144,7 @@ app.init = function()
 app.onReady = function()
 {
     app.init();
-    app.bind("#case_information", {data: app.data});
+    app.bind("#case_information", {data: app.data, controller: app.controller,});
     app.bind("#app", {data: app.data, controller: app.controller,});
 }
 

@@ -2,6 +2,7 @@
 {% block body %}
     <h1>Motor Vehicle Search</h1>
     <form class="needs-validation" novalidate method="post">
+        <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label for="state">State</label>

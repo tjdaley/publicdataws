@@ -92,6 +92,19 @@ def join_results(search_type:str, prior_results:dict, new_results:list)->dict:
         merged_result = new_results_dict
     return merged_result
 
+def filter_results(results:list, case_id:str, category:str):
+    excluded = DATABASE.get_case_items(session['email'], case_id, "X{}".format(category))
+    if excluded:
+        for item in results:
+            if item.key() in excluded:
+                item.case_status = "X"
+
+    included = DATABASE.get_case_items(session['email'], case_id, category)
+    if included:
+        for item in results:
+            if item.key() in included:
+                item.case_status = "I"
+
 def search_drivers(search_type, search_terms, search_state):
     (success, message, results) = WEBSERVICE.drivers_license(
         pd_credentials(session),
@@ -159,25 +172,30 @@ def search_dmv():
     if form["owner_name"]:
         (success, message, results) = WEBSERVICE.dmv_name(pd_credentials(session), search_terms=form['owner_name'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "owner_name", form["owner_name"]))
+        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if form["plate"]:
         (success, message, results) = WEBSERVICE.dmv_plate(pd_credentials(session), search_terms=form['plate'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "plate", form["plate"]))
+        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if form["vin"]:
         (success, message, results) = WEBSERVICE.dmv_vin(pd_credentials(session), search_terms=form['vin'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "vin", form["vin"]))
+        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if form["search"]:
         (success, message, results) = WEBSERVICE.dmv_any(pd_credentials(session), search_terms=form['search'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "any", form["search"]))
+        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if success:
         results = [net_results[key] for key in net_results.keys()]
+        results = sorted(results, key = lambda i: (i.case_status, i.year_make_model))
 
         if not results:
             message = """
@@ -269,7 +287,22 @@ def add_case_item():
     case_id = fields['case_id']
     category = fields['category']
     key = fields['key']
+    # Add to the included list and remove from the excluded list.
     success = DATABASE.add_to_case(session['email'], case_id, category, key, item)
+    success = DATABASE.del_from_case(session['email'], case_id, "X"+category, key, item)
+    return jsonify({"success": success, "message": "Nothing to say."})
+
+@app.route('/case/del_item/', methods=['POST'])
+@is_logged_in
+def del_case_item():
+    fields = request.form
+    item = {key:value for (key, value) in fields.items() if key not in ['case_id', 'category', 'key']}
+    case_id = fields['case_id']
+    category = fields['category']
+    key = fields['key']
+    # Remove from included list and add to excluded list.
+    success = DATABASE.del_from_case(session['email'], case_id, category, key, item)
+    success = DATABASE.add_to_case(session['email'], case_id, "X"+category, key, item)
     return jsonify({"success": success, "message": "Nothing to say."})
 
 class RegisterForm(Form):

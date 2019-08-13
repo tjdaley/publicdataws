@@ -88,11 +88,17 @@ class DmvSummary(BaseRecord):
         self.source = None
         self.state = None
 
-        self.case_status = None # (I)ncluded, e(X)cluded, or None
+        self.case_status = "N" # (I)ncluded, e(X)cluded, or (N)either
 
     def __str__(self):
         return "Owner name: {} || VIN: {} || Year/MakeModel: {} || Plate: {} || Prev Plate: {} || Data Source: {} || Source: {} || State: {}" \
             .format(self.owner_name, self.vin, self.year_make_model, self.plate, self.prev_plate, self.data_source, self.source, self.state)
+
+    def key(self)->str:
+        """
+        Gets the database storage key for this item.
+        """
+        return "{}:{}.{}.{}".format(self.source, self.db, self.ed, self.rec)
 
     def from_xml(self, root, source:str, state:str):
         """

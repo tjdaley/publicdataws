@@ -56,9 +56,17 @@ class DlSummary(BaseRecord):
         self.source = None
         self.state = None
 
+        self.case_status = "N" # (I)ncluded, e(X)cluded, or (N)either
+
     def __str__(self):
         return "Driver name: {} || DOB: {} || Source: {} || State: {}" \
             .format(self.driver_name, self.dob, self.data_source, self.state)
+
+    def key(self)->str:
+        """
+        Gets the database storage key for this item.
+        """
+        return "{}:{}.{}.{}".format(self.source, self.db, self.ed, self.rec)
 
     def from_xml(self, root, source:str, state:str):
         """
