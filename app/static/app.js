@@ -22,12 +22,15 @@ var controller = {
         sessionStorage.setItem("case_id", id);
     },
 
-    deleteVehicleFromCase: function (event, rivets_binding)
+    updateCaseItems: function (event, rivets_binding)
     {
         let button = event.target;
         let db = button.getAttribute("data-db");
         let ed = button.getAttribute("data-ed");
         let rec = button.getAttribute("data-rec");
+        let operation = button.getAttribute("data-op")
+        let category = button.getAttribute("data-category")
+        let description = button.getAttribute("data-description")
         let case_id = rivets_binding.data.case.id;
 
         let payload = {
@@ -35,45 +38,15 @@ var controller = {
             ed: ed,
             rec: rec,
             case_id: case_id,
-            category: "PROPERTY:VEHICLE",
+            description: description,
+            category: category,
+            op: operation,
             key: `PUBLICDATA:${db}.${ed}.${rec}`};
         console.log(payload);
         $.ajax(
         {
             method: "POST",
-            url: "/case/del_item/",
-            data: payload
-        })
-        .done(function( msg ) 
-        {
-            console.log(msg);
-            if (msg.success)
-            {
-                document.location.reload(true);
-            }
-        });
-    },
-
-    addVehicleToCase: function (event, rivets_binding)
-    {
-        let button = event.target;
-        let db = button.getAttribute("data-db");
-        let ed = button.getAttribute("data-ed");
-        let rec = button.getAttribute("data-rec");
-        let case_id = rivets_binding.data.case.id;
-
-        let payload = {
-            db: db,
-            ed: ed,
-            rec: rec,
-            case_id: case_id,
-            category: "PROPERTY:VEHICLE",
-            key: `PUBLICDATA:${db}.${ed}.${rec}`};
-        console.log(payload);
-        $.ajax(
-        {
-            method: "POST",
-            url: "/case/add_item/",
+            url: "/case/update_items/",
             data: payload
         })
         .done(function( msg ) 
