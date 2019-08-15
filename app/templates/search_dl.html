@@ -2,6 +2,7 @@
 {% block body %}
     <h1>Driver's License Search</h1>
     <form class="needs-validation mb-3 p-2 bg-light" novalidate method="post">
+       <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
             <div class="col-md-3">
                 <label for="broad_search">Entire record</label>
@@ -27,6 +28,7 @@
     </form>
 
     <form class="needs-validation  mb-3 p-2 bg-light" novalidate method="post">
+        <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
             <div class="col-md-3">
                 <label for="name">Name</label>
@@ -52,6 +54,7 @@
     </form>
 
     <form class="needs-validation  mb-3 p-2 bg-light" novalidate method="post">
+        <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
             <div class="col-md-3">
                 <label for="dob">Birth date</label>
@@ -77,6 +80,7 @@
     </form>
     
     <form class="needs-validation  mb-3 p-2 bg-light" novalidate method="post">
+        <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
             <div class="col-md-3">
                 <label for="dlnum">License number</label>

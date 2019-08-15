@@ -93,6 +93,17 @@ def join_results(search_type:str, prior_results:dict, new_results:list)->dict:
     return merged_result
 
 def filter_results(results:list, case_id:str, category:str):
+    """
+    Sets the case status property of each item in the results list.
+
+    Args:
+        results (list): List of items founds during search.
+        case_id (str): _id property of case document in the cases collection.
+        categor (str): The category or category:sub_category of the items in *results*.
+
+    Return:
+        None. The *results* list is modified in place.
+    """
     excluded = DATABASE.get_case_items(session['email'], case_id, "X{}".format(category))
     if excluded:
         for item in results:
@@ -105,7 +116,7 @@ def filter_results(results:list, case_id:str, category:str):
             if item.key() in included:
                 item.case_status = "I"
 
-def search_drivers(search_type, search_terms, search_state):
+def search_drivers(search_type, search_terms, search_state, case_id):
     (success, message, results) = WEBSERVICE.drivers_license(
         pd_credentials(session),
         search_terms=search_terms,
@@ -125,6 +136,8 @@ def search_drivers(search_type, search_terms, search_state):
             return redirect(url_for('search_dl'))
         
         flash("Found {} matching drivers.".format(len(results)), "success")
+        filter_results(results, case_id, "PERSON")
+        results = sorted(results, key = lambda i: (i.case_status, i.driver_name))
         return render_template('drivers.html', drivers=results)
 
     form = request.query()
@@ -136,7 +149,8 @@ def search_dl_address():
     search_type = "main"
     search_terms = request.args.get('a')
     search_state = request.args.get('s').lower()
-    return search_drivers(search_type, search_terms, search_state)
+    case_id = request.args.get('case_id')
+    return search_drivers(search_type, search_terms, search_state, case_id)
 
 @app.route('/search/dl', methods=['GET', 'POST'])
 @is_logged_in
@@ -148,14 +162,15 @@ def search_dl():
     search_type = form["search_type"]
     search_terms = form["search_terms"]
     search_state = form["state"]
-    return search_drivers(search_type, search_terms, search_state)
+    case_id = form['case_id']
+    return search_drivers(search_type, search_terms, search_state, case_id)
 
-@app.route('/driver/<string:db>/<string:ed>/<string:rec>/<string:state>/', methods=['GET'])
+@app.route('/driver/<string:db>/<string:ed>/<string:rec>/<string:state>/<string:caseid>', methods=['GET'])
 @is_logged_in
-def driver_details(db, ed, rec, state):
+def driver_details(db, ed, rec, state, caseid):
     (success, message, result) = WEBSERVICE.driver_details(pd_credentials(session), db, ed, rec, state)
     if success:
-        return render_template('driver.html', driver=result)
+        return render_template('driver.html', driver=result, case_id=caseid)
     return render_template("search_error.html", formvariables=[], operation="Search: DL Details", message=message)
 
 @app.route('/search/dmv', methods=['GET', 'POST'])
@@ -279,31 +294,30 @@ def list_cases():
     cases = DATABASE.get_cases({"email": session["email"]})
     return render_template('cases.html', cases=cases)
 
-@app.route('/case/add_item/', methods=['POST'])
+@app.route('/case/update_items/', methods=['POST'])
 @is_logged_in
-def add_case_item():
+def update_case_items():
     fields = request.form
-    item = {key:value for (key, value) in fields.items() if key not in ['case_id', 'category', 'key']}
+    item = {key:value for (key, value) in fields.items() if key not in ['case_id', 'category', 'key', 'operation']}
     case_id = fields['case_id']
     category = fields['category']
     key = fields['key']
-    # Add to the included list and remove from the excluded list.
-    success = DATABASE.add_to_case(session['email'], case_id, category, key, item)
-    success = DATABASE.del_from_case(session['email'], case_id, "X"+category, key, item)
-    return jsonify({"success": success, "message": "Nothing to say."})
+    description = fields['description']
+    operation = fields['op'].lower()
 
-@app.route('/case/del_item/', methods=['POST'])
-@is_logged_in
-def del_case_item():
-    fields = request.form
-    item = {key:value for (key, value) in fields.items() if key not in ['case_id', 'category', 'key']}
-    case_id = fields['case_id']
-    category = fields['category']
-    key = fields['key']
-    # Remove from included list and add to excluded list.
-    success = DATABASE.del_from_case(session['email'], case_id, category, key, item)
-    success = DATABASE.add_to_case(session['email'], case_id, "X"+category, key, item)
-    return jsonify({"success": success, "message": "Nothing to say."})
+    if operation == "add":
+        # Add to the included list and remove from the excluded list.
+        success = DATABASE.add_to_case(session['email'], case_id, category, key, item)
+        success = DATABASE.del_from_case(session['email'], case_id, "X"+category, key, item)
+        return jsonify({"success": success, "message": "Item added: {}".format(description)})
+    elif operation == "del":
+        success = DATABASE.del_from_case(session['email'], case_id, category, key, item)
+        success = DATABASE.add_to_case(session['email'], case_id, "X"+category, key, item)
+        return jsonify({"success": success, "message": "Item removed: {}".format(description)})
+
+    message = "Invalid operation: {}".format(operation)
+    flash(message, "danger")
+    return jsonify({"success": False, "message": message})
 
 class RegisterForm(Form):
     name = StringField("Name", [validators.DataRequired(), validators.Length(min=1, max=50)])

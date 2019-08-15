@@ -10,7 +10,11 @@
                     data-db="{{vehicle.db}}"
                     data-ed="{{vehicle.ed}}"
                     data-rec="{{vehicle.rec}}"
-                    rv-on-click="controller.addVehicleToCase"
+                    data-op="add"
+                    data-category="PROPERTY:VEHICLE"
+                    data-description="{{vehicle.year_make_model}}"
+                    rv-on-click="controller.updateCaseItems"
+                    rv-show="data.case.id"
                     class="btn btn-outline-primary btn-sm">Add</button>
                 {% endif %}
                 <a href="/vehicle/{{vehicle.db}}/{{vehicle.ed}}/{{vehicle.rec}}/{{vehicle.state}}/">{{vehicle.year_make_model}}</a>
@@ -20,7 +24,11 @@
                     data-db="{{vehicle.db}}"
                     data-ed="{{vehicle.ed}}"
                     data-rec="{{vehicle.rec}}"
-                    rv-on-click="controller.deleteVehicleFromCase"
+                    data-op="del"
+                    data-category="PROPERTY:VEHICLE"
+                    data-description="{{vehicle.year_make_model}}"
+                    rv-on-click="controller.updateCaseItems"
+                    rv-show="data.case.id"
                     class="btn btn-outline-danger btn-sm float-right">X</button>
                 {% endif %}
 

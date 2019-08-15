@@ -429,7 +429,7 @@ class Database(object):
             return False
 
         # Create item collection to add to, if not already there.
-        (main_cat, sub_cat) = category.split(":", 2)
+        (main_cat, sub_cat) = split_category(category)
         if main_cat not in case_doc:
             case_doc[main_cat] = {}
 
@@ -495,7 +495,7 @@ class Database(object):
 
         # See if item collection exists. Return True if the collection does not exist
         # because there is nothing to delete.
-        (main_cat, sub_cat) = category.split(":", 2)
+        (main_cat, sub_cat) = split_category(category)
         if main_cat not in case_doc:
             return True
 
@@ -553,11 +553,14 @@ class Database(object):
             return False
 
         # Split the category
-        (main_cat, sub_cat) = category.split(":", 2)
+        (main_cat, sub_cat) = split_category(category)
+
         if main_cat not in case_doc:
+            self.logger.info("database.get_case_items(): Case '%s' does not have category '%s'", case_id, main_cat)
             return []
 
         if sub_cat and sub_cat not in case_doc[main_cat]:
+            self.logger.info("database.get_case_items(): Case '%s' does not have sub-category '%s->%s'", case_id, main_cat, sub_cat)
             return []
 
         # Return the requested items
@@ -631,3 +634,22 @@ def record_from_dict(fields:dict, id_fields:list=[])->dict:
             record[key] = value
 
     return record
+
+def split_category(category:str):
+    """
+    Split category string into category and sub-category. The category and sub-category
+    are separated by a colon (":"). However, not all categories have sub-categories. This
+    method handles both cases.
+
+    Args:
+        category (str): Category[:sub-category] String, e.g. "PROPERTY:VEHICLE", "PEOPLE"
+
+    Returns:
+        (category, sub_category)
+    """
+    try:
+        (category, sub_cat) = category.split(":", 2)
+    except ValueError:
+        (category, sub_cat) = (category, None)
+
+    return (category, sub_cat)
