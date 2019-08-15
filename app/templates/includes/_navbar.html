@@ -1,17 +1,11 @@
 <nav class="navbar navbar-expand-md navbar-default">
-    <a class="navbar-brand" href="/"><img height="30px" src="/static/discovery_bot_logo.png" /></a>
+    <a class="navbar-brand" href="/"><img title="Discovery.Bot Home" height="30px" src="/static/discovery_bot_logo.png" /></a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"><i class="fas fa-bars"></i></span>
     </button>
   
     <div class="collapse navbar-collapse" id="navbarsExampleDefault">
       <ul class="nav mr-auto">
-        <!--li class="nav-item">
-          <a class="nav-link" href="/">Home</a>
-        </li-->
-        <li class="nav-item">
-          <a class="nav-link" href="/about">About</a>
-        </li>
         {% if session.logged_in %}
         <li class="nav-item">
             <a class="nav-link" href="/cases">Cases</a>
@@ -31,11 +25,12 @@
       <ul class="nav navbar-nav navbar-right">
         {% if session.logged_in %}
         <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
-        <li class="nav-item"><a class="nav-link" href="/settings"><span style="font-size:1em; color:green"><i class="fas fa-cog"></i></span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/settings"><span style="font-size:1em; color:green"><i title="Settings" class="fas fa-cog"></i></span></a></li>
         {% else %}
         <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
         <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
         {% endif %}
+        <li class="nav-item"><a class="nav-link" href="/about"><span style="font-size:1em; color:darkgrey"><i title="About" class="fas fa-address-card"></i></span></a></li>
       </ul>
     </div>
   </nav>
