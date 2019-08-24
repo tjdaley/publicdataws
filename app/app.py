@@ -235,6 +235,11 @@ def vehicle_details(db, ed, rec, state):
         return render_template('vehicle.html', vehicle=result)
     return render_template("search_error.html", formvariables=[], operation="Search: DMV Details", message=message)
 
+@app.route("/case/items/<string:case_id>", methods=['GET'])
+@is_logged_in
+def get_case_items(case_id):
+    return render_template("discovery_list.html", discovery=DATABASE.get_case_items(session['email'], case_id))
+
 @app.route('/search/rp', methods=['GET'])
 @is_logged_in
 def search_rp_get():
