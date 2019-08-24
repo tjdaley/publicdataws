@@ -22,6 +22,11 @@ var controller = {
         sessionStorage.setItem("case_id", id);
     },
 
+    showCaseItems: function(event, rivets_binding)
+    {
+        window.location.assign("/case/items/"+app.data.case.id);
+    },
+
     updateCaseItems: function (event, rivets_binding)
     {
         let button = event.target;
@@ -104,7 +109,7 @@ app.init = function()
         // Since rivets 0.9 functions are not automatically executed in expressions. If you need backward compatibilty, set this parameter to true
         executeFunctions: false
       
-      });
+    });
 }
 
 /**
