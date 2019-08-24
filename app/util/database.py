@@ -15,6 +15,7 @@ import time
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from bson.errors import InvalidId
 
 from .logger import Logger
 
@@ -428,20 +429,26 @@ class Database(object):
             self.logger.error("database.add_to_case(): Case '%s' not found for '%s'", case_id, email)
             return False
 
+        # Make sure case has discovery items dictionary.
+        if "discovery" not in case_doc:
+            case_doc["discovery"] = {}
+
+        discovery = case_doc["discovery"]
+
         # Create item collection to add to, if not already there.
         (main_cat, sub_cat) = split_category(category)
-        if main_cat not in case_doc:
-            case_doc[main_cat] = {}
+        if main_cat not in discovery:
+            discovery[main_cat] = {}
 
-        if sub_cat and sub_cat not in case_doc[main_cat]:
-            case_doc[main_cat][sub_cat] = {}
+        if sub_cat and sub_cat not in discovery[main_cat]:
+            discovery[main_cat][sub_cat] = {}
 
         # Now insert or update the corresponding key into the case document.
         subrecord = record_from_dict(fields)
         if not sub_cat:
-            case_doc[main_cat][key] = subrecord
+            discovery[main_cat][key] = subrecord
         else:
-            case_doc[main_cat][sub_cat][key] = subrecord
+            discovery[main_cat][sub_cat][key] = subrecord
 
         # Finally, save the updated case document.
         # Create local copy of fields
@@ -495,19 +502,24 @@ class Database(object):
 
         # See if item collection exists. Return True if the collection does not exist
         # because there is nothing to delete.
-        (main_cat, sub_cat) = split_category(category)
-        if main_cat not in case_doc:
+        if "discovery" not in case_doc:
             return True
 
-        if sub_cat and sub_cat not in case_doc[main_cat]:
+        discovery = case_doc["discovery"]
+
+        (main_cat, sub_cat) = split_category(category)
+        if main_cat not in discovery:
+            return True
+
+        if sub_cat and sub_cat not in discovery[main_cat]:
             return True
 
         # Now remove the corresponding key into the case document.
         try:
             if not sub_cat:
-                del case_doc[main_cat][key]
+                del discovery[main_cat][key]
             else:
-                del case_doc[main_cat][sub_cat][key]
+                del discovery[main_cat][sub_cat][key]
         except KeyError:
             return True # It's already gone.
 
@@ -522,7 +534,7 @@ class Database(object):
         mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
         return mongo_result.modified_count == 1
 
-    def get_case_items(self, email:str, case_id:str, category:str)->list:
+    def get_case_items(self, email:str, case_id:str, category:str=None)->list:
         """
         Get a list of case items by category, e.g. "PROPERTY" or "PROPERTY:VEHICLE"
 
@@ -535,6 +547,16 @@ class Database(object):
         Returns:
             (list): List of items found, or empty list if nothing found.
         """
+        # Verify that case_id is a valid ObjectId.
+        # An invalid ID probably means that the case_id is not set on the client-side, which is
+        # not really an error, but a normal state. We catch that state here so that we can focus
+        # the error handling where it is most easily caught.
+        try:
+            my_case_id = ObjectId(case_id)
+        except InvalidId as e:
+            self.logger.debug("database.get_case_items(): Invalid case_id: '%s'", case_id)
+            return []
+
         # Get user_id for the given email
         user_id = self.get_user_id_for_email(email)
         if not user_id:
@@ -542,7 +564,6 @@ class Database(object):
             return False
         
         # Get make sure this user owns the case.
-        my_case_id = ObjectId(case_id)
         filter = {
             "_id": my_case_id,
             "user_id": user_id
@@ -552,22 +573,33 @@ class Database(object):
             self.logger.error("database.get_case_items(): Case '%s' not found for '%s'", case_id, email)
             return False
 
+        # See if we have any discovery added to this case.
+        if "discovery" not in case_doc:
+            self.logger.info("database.get_case_items(): Case '%s' does not have any discovery.", case_id)
+            return []
+
+        discovery = case_doc["discovery"]
+
+        # If the caller did not specify a category, send all discovery back.
+        if not category:
+            return discovery
+
         # Split the category
         (main_cat, sub_cat) = split_category(category)
 
-        if main_cat not in case_doc:
+        if main_cat not in discovery:
             self.logger.info("database.get_case_items(): Case '%s' does not have category '%s'", case_id, main_cat)
             return []
 
-        if sub_cat and sub_cat not in case_doc[main_cat]:
+        if sub_cat and sub_cat not in discovery[main_cat]:
             self.logger.info("database.get_case_items(): Case '%s' does not have sub-category '%s->%s'", case_id, main_cat, sub_cat)
             return []
 
         # Return the requested items
         if sub_cat:
-            return case_doc[main_cat][sub_cat]
+            return discovery[main_cat][sub_cat]
 
-        return case_doc[main_cat]
+        return discovery[main_cat]
 
     def add_user(self, fields:dict)->bool:
         """
@@ -648,8 +680,14 @@ def split_category(category:str):
         (category, sub_category)
     """
     try:
-        (category, sub_cat) = category.split(":", 2)
+        (main_cat, sub_cat) = category.split(":", 2)
     except ValueError:
-        (category, sub_cat) = (category, None)
+        (main_cat, sub_cat) = (category, None)
 
-    return (category, sub_cat)
+    if main_cat:
+        main_cat = '/' + main_cat
+
+    if sub_cat:
+        sub_cat = '/' + sub_cat
+
+    return (main_cat, sub_cat)
