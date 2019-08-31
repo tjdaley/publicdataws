@@ -107,6 +107,7 @@ class Database(object):
         filter = {"source":source, "query": query}
 
         mongo_result = self.dbconn[CACHE_TABLE_NAME].replace_one(filter, record, upsert=True)
+        self.logger.debug("mongo_result of replace_one: %s", mongo_result)
         return True
 
     def check_cache(self, source:str, query:str)->object:
@@ -634,6 +635,27 @@ class Database(object):
         filter = {"email": fields['email']}
         mongo_result = self.dbconn[USER_TABLE].update_one(filter, {"$set":fields}, upsert=False)
         return mongo_result.modified_count == 1
+
+    # Helper to stringify ObjectId variables so they can be saved in a session.
+    def safe_dict(self, d:dict)->dict:
+        """
+        Stringify ObjectIds. Some operations try to serialize a dictionary and serialization fails
+        (for some reason) if the dict contains an ObjectId. This helper converts ObjectIds to strings.
+        The input dictionary is not affected.
+
+        Args:
+            d (dict): The dictionary to process.
+
+        Returns:
+            (dict): Dictionary with ObjectIds converted to strings
+        """
+        result = {}
+        for key, value in d.items():
+            if isinstance(value, ObjectId):
+                result[key] = str(value)
+            else:
+                result[key] = value
+        return result
 
 def base_record()->dict:
     """
