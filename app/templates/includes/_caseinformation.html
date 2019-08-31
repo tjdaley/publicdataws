@@ -1,14 +1,17 @@
 {% if session.logged_in %}
-<div class="container-fluid text-center bg-info" id="case_information">
+<div class="container-fluid text-center bg-info"
+     id="case_information"
+     rv-show="{% if session.case %}1{% else %}0{% endif %}">
     <small>ACTIVE CASE: </small>
-    <small rv-text="data.case.description"></small> (<small rv-text="data.case.cause_number"></small>)
+    {% if session.case %}
+    <small>{{ session.case.description }}</small> (<small>{{ session.case.cause_number }}</small>)
+    {% endif %}
     <button
         type="button"
         data-cause-number=""
         data-description=""
         data-id=""
         rv-on-click="controller.setCase"
-        rv-show="data.case.id"
         class="btn btn-outline-light btn-sm mx-1 my-1">Clear</button>
     <button
         type="button"
@@ -16,7 +19,6 @@
         data-description=""
         data-id=""
         rv-on-click="controller.showCaseItems"
-        rv-show="data.case.id"
         class="btn btn-outline-light btn-sm mx-1 my-1">Items</button>
 </div>
 {% endif %}

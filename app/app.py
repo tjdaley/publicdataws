@@ -44,6 +44,17 @@ def is_admin_user(f):
             return redirect(url_for("login"))
     return wrap
 
+# Decorator to check if we have an active case set on our session
+def is_case_set(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'case' in session:
+            return f(*args, **kwargs)
+        else:
+            flash("Select a case if you want to add, remove, or view case items.", "primary")
+            return redirect(url_for("list_cases"))
+    return wrap
+
 # Helper to create Public Data credentials from session variables
 def pd_credentials(mysession)->dict:
     return {"username": session["pd_username"], "password": session["pd_password"]}
@@ -116,7 +127,7 @@ def filter_results(results:list, case_id:str, category:str):
             if item.key() in included:
                 item.case_status = "I"
 
-def search_drivers(search_type, search_terms, search_state, case_id):
+def search_drivers(search_type, search_terms, search_state):
     (success, message, results) = WEBSERVICE.drivers_license(
         pd_credentials(session),
         search_terms=search_terms,
@@ -136,11 +147,13 @@ def search_drivers(search_type, search_terms, search_state, case_id):
             return redirect(url_for('search_dl'))
         
         flash("Found {} matching drivers.".format(len(results)), "success")
-        filter_results(results, case_id, "PERSON")
+
+        if 'case' in session:
+            filter_results(results, session['case']['_id'], "PERSON")
         results = sorted(results, key = lambda i: (i.case_status, i.driver_name))
         return render_template('drivers.html', drivers=results)
 
-    form = request.query()
+    form = request.form
     return render_template("search_error.html", formvariables=form, operation="Search: DL", message=message)
 
 @app.route('/search/dl_address', methods=['GET'])
@@ -149,8 +162,7 @@ def search_dl_address():
     search_type = "main"
     search_terms = request.args.get('a')
     search_state = request.args.get('s').lower()
-    case_id = request.args.get('case_id')
-    return search_drivers(search_type, search_terms, search_state, case_id)
+    return search_drivers(search_type, search_terms, search_state)
 
 @app.route('/search/dl', methods=['GET', 'POST'])
 @is_logged_in
@@ -162,15 +174,14 @@ def search_dl():
     search_type = form["search_type"]
     search_terms = form["search_terms"]
     search_state = form["state"]
-    case_id = form['case_id']
-    return search_drivers(search_type, search_terms, search_state, case_id)
+    return search_drivers(search_type, search_terms, search_state)
 
-@app.route('/driver/<string:db>/<string:ed>/<string:rec>/<string:state>/<string:caseid>', methods=['GET'])
+@app.route('/driver/<string:db>/<string:ed>/<string:rec>/<string:state>/', methods=['GET'])
 @is_logged_in
-def driver_details(db, ed, rec, state, caseid):
+def driver_details(db, ed, rec, state):
     (success, message, result) = WEBSERVICE.driver_details(pd_credentials(session), db, ed, rec, state)
     if success:
-        return render_template('driver.html', driver=result, case_id=caseid)
+        return render_template('driver.html', driver=result)
     return render_template("search_error.html", formvariables=[], operation="Search: DL Details", message=message)
 
 @app.route('/search/dmv', methods=['GET', 'POST'])
@@ -181,31 +192,39 @@ def search_dmv():
 
     # Process each field specified by the user, either conjuncitively or disjunctively.
     form = request.form
+    if 'case' in session:
+        case_id = session['case']['_id']
+    else:
+        case_id = None
     search_type = form["search_type"]
     net_results = {}
 
     if form["owner_name"]:
         (success, message, results) = WEBSERVICE.dmv_name(pd_credentials(session), search_terms=form['owner_name'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "owner_name", form["owner_name"]))
-        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
+        if case_id:
+            filter_results(results, case_id, "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if form["plate"]:
         (success, message, results) = WEBSERVICE.dmv_plate(pd_credentials(session), search_terms=form['plate'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "plate", form["plate"]))
-        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
+        if case_id:
+            filter_results(results, case_id, "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if form["vin"]:
         (success, message, results) = WEBSERVICE.dmv_vin(pd_credentials(session), search_terms=form['vin'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "vin", form["vin"]))
-        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
+        if case_id:
+            filter_results(results, case_id, "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if form["search"]:
         (success, message, results) = WEBSERVICE.dmv_any(pd_credentials(session), search_terms=form['search'], us_state=form['state'])
         print("Found {} records for {} search for '{}'.".format(len(results), "any", form["search"]))
-        filter_results(results, form['case_id'], "PROPERTY:VEHICLE")
+        if case_id:
+            filter_results(results, case_id, "PROPERTY:VEHICLE")
         net_results = join_results(search_type, net_results, results)
 
     if success:
@@ -235,10 +254,12 @@ def vehicle_details(db, ed, rec, state):
         return render_template('vehicle.html', vehicle=result)
     return render_template("search_error.html", formvariables=[], operation="Search: DMV Details", message=message)
 
-@app.route("/case/items/<string:case_id>", methods=['GET'])
+@app.route("/case/items/", methods=['GET'])
 @is_logged_in
-def get_case_items(case_id):
-    return render_template("discovery_list.html", discovery=DATABASE.get_case_items(session['email'], case_id))
+@is_case_set
+def get_case_items():
+    case_id = session['case']['_id']
+    return render_template("discovery_list.html", discovery=DATABASE.get_case_items(session['email'], case_id=case_id), case_id=case_id)
 
 @app.route('/search/rp', methods=['GET'])
 @is_logged_in
@@ -301,10 +322,11 @@ def list_cases():
 
 @app.route('/case/update_items/', methods=['POST'])
 @is_logged_in
+@is_case_set
 def update_case_items():
     fields = request.form
     item = {key:value for (key, value) in fields.items() if key not in ['case_id', 'category', 'key', 'operation']}
-    case_id = fields['case_id']
+    case_id = session['case']['_id']
     category = fields['category']
     key = fields['key']
     description = fields['description']
@@ -449,6 +471,30 @@ def logout():
     messages = ["Good bye!!", "Hope to see you again soon.", "Thank you for visiting!!"]
     flash(random.choice(messages), "success")
     return redirect(url_for('login'))
+
+@app.route("/setcaseid/", methods=["POST"])
+@is_logged_in
+def set_case_id():
+    case = DATABASE.get_case({"email": session["email"], "_id": request.form["_id"]})
+    case["_id"] = str(case["_id"])
+    session["case"] = DATABASE.safe_dict(case)
+    status = {"message": "Case is set", "success": True, "is_set": True}
+    return jsonify(status)
+    
+
+@app.route("/clearcaseid/", methods=["POST"])
+@is_logged_in
+def clear_case_id():
+    del session["case"]
+    return jsonify({"message": "Case is cleared", "success": True,"is_set": False})
+
+@app.route("/privacy/", methods=["GET"])
+def privacy():
+    return render_template("privacy.html")
+
+@app.route("/terms_and_conditions", methods=["GET"])
+def terms_and_conditions():
+    return render_template("terms_and_conditions.html")
 
 if __name__ == "__main__":
     #global WEBSERVICE

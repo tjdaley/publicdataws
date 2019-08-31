@@ -3,28 +3,43 @@
 var controller = {
     setCase:function (event, rivets_binding)
     {
-        let my_case = rivets_binding.data.case;
         let button = event.target;
+        let id = button.getAttribute("data-id");
 
-        // Get button's custom attributes
-        let cause_number = button.getAttribute("data-cause-number");
-        let description = button.getAttribute("data-description");
-        let id = event.target.getAttribute("data-id");
+        let url;
+        let payload;
 
-        // Update the data model
-        my_case.cause_number = cause_number;
-        my_case.description = description;
-        my_case.id = id;
+        if (id == "")
+        {
+            url = "/clearcaseid/";
+            payload = {"_id": "none"};
+        }
+        else
+        {
+            url = "/setcaseid/";
+            payload = {"_id": id};    
+        }
 
-        // Update local storage
-        sessionStorage.setItem("cause_number", cause_number);
-        sessionStorage.setItem("case_description", description);
-        sessionStorage.setItem("case_id", id);
-    },
+        // Update server-side session cookie
+        $.ajax(
+            {
+                method: "POST",
+                url: url,
+                data: payload
+            })
+            .done(function( msg ) 
+            {
+                console.log(msg);
+                if (msg.success)
+                {
+                    document.location.reload(true);
+                }
+            });
+        },
 
     showCaseItems: function(event, rivets_binding)
     {
-        window.location.assign("/case/items/"+app.data.case.id);
+        window.location.assign("/case/items/");
     },
 
     updateCaseItems: function (event, rivets_binding)
@@ -36,7 +51,7 @@ var controller = {
         let operation = button.getAttribute("data-op")
         let category = button.getAttribute("data-category")
         let description = button.getAttribute("data-description")
-        let case_id = rivets_binding.data.case.id;
+        //let case_id = rivets_binding.data.case.id;
 
         let payload = {
             db: db,
@@ -122,8 +137,8 @@ app.init = function()
 app.onReady = function()
 {
     app.init();
-    app.bind("#case_information", {data: app.data, controller: app.controller,});
     app.bind("#app", {data: app.data, controller: app.controller,});
+    app.bind("#case_information", {data: app.data, controller: app.controller,});
 }
 
 /**
