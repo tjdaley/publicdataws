@@ -14,7 +14,7 @@
                     data-category="PROPERTY:VEHICLE"
                     data-description="{{vehicle.year_make_model}}"
                     rv-on-click="controller.updateCaseItems"
-                    rv-show="data.case.id"
+                    rv-show="{% if 'case' in session %}1{% else %}0{% endif %}"
                     class="btn btn-outline-primary btn-sm">Add</button>
                 {% endif %}
                 <a href="/vehicle/{{vehicle.db}}/{{vehicle.ed}}/{{vehicle.rec}}/{{vehicle.state}}/">{{vehicle.year_make_model}}</a>
@@ -28,7 +28,7 @@
                     data-category="PROPERTY:VEHICLE"
                     data-description="{{vehicle.year_make_model}}"
                     rv-on-click="controller.updateCaseItems"
-                    rv-show="data.case.id"
+                    rv-show="{% if 'case' in session %}1{% else %}0{% endif %}"
                     class="btn btn-outline-danger btn-sm float-right">X</button>
                 {% endif %}
 

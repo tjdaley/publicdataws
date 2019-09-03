@@ -6,6 +6,7 @@ Copyright (c) 2019 by Thomas J. Daley, J.D.
 __author__ = "Thomas J. Daley, J.D."
 __version__ = "0.0.1"
 
+import hashlib
 import re
 import xml.etree.ElementTree as ET
 
@@ -87,6 +88,7 @@ class DmvSummary(BaseRecord):
         self.rec = None
         self.source = None
         self.state = None
+        self.hash = None
 
         self.case_status = "N" # (I)ncluded, e(X)cluded, or (N)either
 
@@ -132,4 +134,6 @@ class DmvSummary(BaseRecord):
                     if mapping["transform"]:
                         value  = mapping["transform"](value)
                     setattr(self, mapping["attr"], value)
-                
+
+        hash_input = "{}{}{}{}".format(self.owner_name, self.year_make_model, self.plate, self.prev_plate)
+        self.hash = hashlib.md5(hash_input.encode())
