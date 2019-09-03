@@ -1,6 +1,10 @@
 """
 database.py - Class for access our persistent data store for publicdataws.
 
+TODO: With the 2 Sep 2019 code reorg/refactor, this needs to operate as a singleton.
+      At this time, we have lots of individual database connections--one for each time
+      this class is imported.
+
 Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 """
 __author__ = "Thomas J. Daley, J.D."
@@ -8,6 +12,7 @@ __version__ = "0.0.1"
 
 from datetime import datetime, timedelta
 import json
+import os
 import pickle
 import xml.etree.ElementTree as ET
 import xml.dom.minidom as MD
@@ -19,7 +24,12 @@ from bson.errors import InvalidId
 
 from .logger import Logger
 
-DB_URL = "mongodb://ec2-54-235-51-13.compute-1.amazonaws.com:27017/"
+try:
+    DB_URL = os.environ["DB_URL"]
+except KeyError as e:
+    Logger.get_logger(log_name="pdws.database").fatal("Database connection string environment variable is not set: %s", str(e))
+    exit()
+
 DB_NAME = "discoverybot"
 CACHE_TABLE_NAME = "search_cache"
 USER_TABLE = "discoverybot_users"
