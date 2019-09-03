@@ -57,7 +57,7 @@ var controller = {
             db: db,
             ed: ed,
             rec: rec,
-            case_id: case_id,
+            //case_id: case_id,
             description: description,
             category: category,
             op: operation,
