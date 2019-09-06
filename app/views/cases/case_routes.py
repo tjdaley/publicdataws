@@ -3,10 +3,13 @@ case_routes.py - Handle the login/logout routes.
 
 This module provides the views for the following routes:
 
-/login
-/logout
-/register
-/settings
+/case/add
+/case/items
+/case/update_items
+/case/<string:id>
+/cases
+/clearcaseid
+/setcaseid
 
 Copyright (c) 2019 by Thomas J. Daley. All Rights Reserved.
 """
@@ -51,26 +54,6 @@ def add_case():
 
     return render_template('case.html', form=form)
 
-@case_routes.route('/case/<string:id>/', methods=['GET', 'POST'])
-@is_logged_in
-def get_case(id):
-    if request.method == 'POST':
-        fields = request.form
-        myfields = {key:value for (key, value) in fields.items()}
-        myfields['_id'] = id
-        myfields['email'] = session['email']
-        result = DATABASE.update_case(myfields)
-        if result:
-            return redirect(url_for('case_routes.list_cases'))
-        flash("Failed to update case. Check log for explanation.", "danger")
-        return redirect(url_for('case_routes.list_cases'))
-    
-    # Show the case on a GET request
-    case = DATABASE.get_case({"_id": id, "email": session["email"]})
-    myfields = {key:value for (key, value) in case.items()}
-    form = AddCaseForm(**myfields)
-    return render_template("case.html", form=form)
-
 @case_routes.route('/cases', methods=['GET'])
 @is_logged_in
 def list_cases():
@@ -102,6 +85,26 @@ def update_case_items():
     message = "Invalid operation: {}".format(operation)
     flash(message, "danger")
     return jsonify({"success": False, "message": message})
+
+@case_routes.route('/case/<string:id>/', methods=['GET', 'POST'])
+@is_logged_in
+def get_case(id):
+    if request.method == 'POST':
+        fields = request.form
+        myfields = {key:value for (key, value) in fields.items()}
+        myfields['_id'] = id
+        myfields['email'] = session['email']
+        result = DATABASE.update_case(myfields)
+        if result:
+            return redirect(url_for('case_routes.list_cases'))
+        flash("Failed to update case. Check log for explanation.", "danger")
+        return redirect(url_for('case_routes.list_cases'))
+    
+    # Show the case on a GET request
+    case = DATABASE.get_case({"_id": id, "email": session["email"]})
+    myfields = {key:value for (key, value) in case.items()}
+    form = AddCaseForm(**myfields)
+    return render_template("case.html", form=form)
 
 @case_routes.route("/setcaseid/", methods=["POST"])
 @is_logged_in

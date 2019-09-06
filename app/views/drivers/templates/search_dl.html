@@ -2,15 +2,14 @@
 {% block body %}
     <h1>Driver's License Search</h1>
     <form class="needs-validation mb-3 p-2 bg-light" novalidate method="post">
-       <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="broad_search">Entire record</label>
             </div>
             <div class="col-md-2">
                 <select class="custom-select d-block" id="state" name="state" required>
-                        <option value="fl">Florida</option>
-                        <option value="tx" selected>Texas</option>
+                    <option value="fl">Florida</option>
+                    <option value="tx" selected>Texas</option>
                 </select>
             </div>
             <div class="col">
@@ -21,7 +20,7 @@
             </div>
         </div>
         <div class="form-row">
-            <div class="col-md-3"></div>
+            <div class="col-md-2"></div>
             <div class="col">
                 <small class="text-muted text-reverse">HINT: Do not specify street designations such as "drive" or "circle".</small>
             </div>
@@ -29,9 +28,8 @@
     </form>
 
     <form class="needs-validation  mb-3 p-2 bg-light" novalidate method="post">
-        <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="name">Name</label>
             </div>
             <div class="col-md-2">
@@ -48,7 +46,7 @@
             </div>
         </div>
         <div class="form-row">
-            <div class="col-md-3"></div>
+            <div class="col-md-2"></div>
             <div class="col">
                 <small class="text-muted">HINT: Use double pipes ("||") to separate variations, e.g. Tom Daley||Thomas Daley. Add YYYYMMDD to filter by DOB.</small>
             </div>
@@ -56,9 +54,8 @@
     </form>
 
     <form class="needs-validation  mb-3 p-2 bg-light" novalidate method="post">
-        <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="dob">Birth date</label>
             </div>
             <div class="col-md-2">
@@ -75,7 +72,7 @@
             </div>
         </div>
         <div class="form-row">
-            <div class="col-md-3"></div>
+            <div class="col-md-2"></div>
             <div class="col">
                 <small class="text-muted">HINT: Format is YYYYMMDD. You can use '??' as wild cards for a date segment, e.g. 196401?? for Jan 1964.</small>
             </div>
@@ -83,9 +80,8 @@
     </form>
     
     <form class="needs-validation  mb-3 p-2 bg-light" novalidate method="post">
-        <input type="hidden" name="case_id" rv-value="data.case.id" />
         <div class="form-group form-row">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="dlnum">License number</label>
             </div>
             <div class="col-md-2">
@@ -102,7 +98,7 @@
             </div>
         </div>
         <div class="form-row">
-            <div class="col-md-3"></div>
+            <div class="col-md-2"></div>
             <div class="col">
                 <small class="text-muted">HINT: You can enter a partial number for a broader match.</small>
             </div>
