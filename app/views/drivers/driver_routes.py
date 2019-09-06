@@ -19,13 +19,11 @@ from views.decorators import is_logged_in, is_case_set
 from webservice import WebService
 WEBSERVICE = None
 
-#from util.database import Database
-#DATABASE = Database()
-#DATABASE.connect()
 
 # Helper to create Public Data credentials from session variables
 def pd_credentials(mysession)->dict:
     return {"username": session["pd_username"], "password": session["pd_password"]}
+
 
 def search_drivers(search_type, search_terms, search_state):
     (success, message, results) = WEBSERVICE.drivers_license(
@@ -45,18 +43,19 @@ def search_drivers(search_type, search_terms, search_state):
             """
             flash(message, "warning")
             return redirect(url_for('search_dl'))
-        
+
         flash("Found {} matching drivers.".format(len(results)), "success")
 
-        #if 'case' in session:
+        # if 'case' in session:
         #    filter_results(results, session['case']['_id'], "PERSON")
-        results = sorted(results, key = lambda i: (i.case_status, i.driver_name))
+        results = sorted(results, key=lambda i: (i.case_status, i.driver_name))
         return render_template('drivers.html', drivers=results)
 
     form = request.form
     return render_template("search_error.html", formvariables=form, operation="Search: DL", message=message)
 
 driver_routes = Blueprint("driver_routes", __name__, template_folder="templates")
+
 
 @driver_routes.route('/search/dl_address', methods=['GET'])
 @is_logged_in
@@ -65,6 +64,7 @@ def search_dl_address():
     search_terms = request.args.get('a')
     search_state = request.args.get('s').lower()
     return search_drivers(search_type, search_terms, search_state)
+
 
 @driver_routes.route('/search/dl', methods=['GET', 'POST'])
 @is_logged_in
@@ -77,6 +77,7 @@ def search_dl():
     search_terms = form["search_terms"]
     search_state = form["state"]
     return search_drivers(search_type, search_terms, search_state)
+
 
 @driver_routes.route('/driver/<string:db>/<string:ed>/<string:rec>/<string:state>/', methods=['GET'])
 @is_logged_in

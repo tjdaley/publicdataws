@@ -1,15 +1,13 @@
 """
 database.py - Class for access our persistent data store for publicdataws.
 
-TODO: With the 2 Sep 2019 code reorg/refactor, this needs to operate as a singleton.
-      At this time, we have lots of individual database connections--one for each time
-      this class is imported.
+TODO: With the 2 Sep 2019 code reorg/refactor, this needs to operate as a
+      singleton.
+      At this time, we have lots of individual database connections--one for
+      each time this class is imported.
 
 Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 from datetime import datetime, timedelta
 import json
 import os
@@ -27,7 +25,10 @@ from .logger import Logger
 try:
     DB_URL = os.environ["DB_URL"]
 except KeyError as e:
-    Logger.get_logger(log_name="pdws.database").fatal("Database connection string environment variable is not set: %s", str(e))
+    Logger.get_logger(log_name="pdws.database") \
+        .fatal(
+            "Database connection string environment variable is not set: %s",
+            str(e))
     exit()
 
 DB_NAME = "discoverybot"
@@ -35,14 +36,17 @@ CACHE_TABLE_NAME = "search_cache"
 USER_TABLE = "discoverybot_users"
 CASE_TABLE = "cases"
 
+
 class MissingFieldException(Exception):
-    def __init__self(self, message:str):
+    def __init__self(self, message: str):
         return super(message)
+
 
 class Database(object):
     """
     Encapsulates a database accessor that is agnostic as to the underlying
-    database product or implementation, e.g. mongo, mysql, dynamodb, flat files, etc.
+    database product or implementation, e.g. mongo, mysql, dynamodb, flat
+    files, etc.
     """
     def __init__(self):
         """
@@ -63,7 +67,11 @@ class Database(object):
         success = False
 
         try:
-            self.logger.debug("Connecting to database %s at %s", DB_NAME, DB_URL)
+            # pep8: disable E501
+            self.logger.debug(
+                "Connecting to database %s at %s",
+                DB_NAME,
+                DB_URL)
             client = MongoClient(DB_URL)
             dbconn = client[DB_NAME]
             self.client = client
@@ -91,40 +99,46 @@ class Database(object):
 
         return status
 
-    def insert_cache(self, source:str, query:str, result:object)->bool:
+    def insert_cache(self, source: str, query: str, result: object)->bool:
         """
-        Record the fact that we have received a file. This method will throw an exception if it
-        encounters one while serialzing the *result*.
+        Record the fact that we have received a file. This method will throw
+        an exception if it encounters one while serialzing the *result*.
 
         Args:
             source (str): Source that was queried, e.g. "PUBLICDATA"
             query (str): The query that was submitted, e.g. the URL
-            result (object): The result was received. Will be searialzed to a string.
+            result (object): The result was received. Will be searialzed to a
+            string.
 
         Returns:
             (bool): True if successful, otherwise False
         """
-        # Record is to be deleted from cache (or at least ignored) after the time-to-live time has passed.
+        # Record is to be deleted from cache (or at least ignored) after the
+        # time-to-live time has passed.
         ttl = datetime.utcnow() + timedelta(days=3)
-        #now = datetime.utcnow()
-        # self.logger.debug("**** NOW={} TTL={}  DIFF={}".format(now, ttl, ttl-now))
 
         # Serialize the result
         (result_type, serialized_result) = self.serialize_cache_entry(result)
 
         # Record to insert
-        record = record_from_dict({"source":source, "query":query, "result":serialized_result, "result_type":result_type, "ttl":ttl})
-        filter = {"source":source, "query": query}
+        record = record_from_dict({
+            "source": source,
+            "query": query,
+            "result": serialized_result,
+            "result_type": result_type,
+            "ttl": ttl})
+        filter = {"source": source, "query": query}
 
         mongo_result = self.dbconn[CACHE_TABLE_NAME].replace_one(filter, record, upsert=True)
         self.logger.debug("mongo_result of replace_one: %s", mongo_result)
         return True
 
-    def check_cache(self, source:str, query:str)->object:
+    def check_cache(self, source: str, query: str)->object:
         """
-        Look into the cache to see if we have a recent answer to this query. If so, reconstitute it and return it. Otherwise,
-        return None. *Recent answer* means a response to this exact *query* upon this same *source* for which the *ttl* is not
-        in the past.
+        Look into the cache to see if we have a recent answer to this query.
+        If so, reconstitute it and return it. Otherwise, return None.
+        *Recent answer* means a response to this exact *query* upon this same
+        *source* for which the *ttl* is not in the past.
 
         Args:
             source (str): Source to be queried
@@ -145,7 +159,7 @@ class Database(object):
 
         return self.reconstitute_cached_response(document)
 
-    def serialize_cache_entry(self, search_result:object)->(str, str):
+    def serialize_cache_entry(self, search_result: object)->(str, str):
         """
         Serialize a search response for saving to our cache.
 
@@ -160,9 +174,7 @@ class Database(object):
 
         try:
             if isinstance(search_result, ET.ElementTree):
-                result_type="XML"
-                #root = search_result.getroot()
-                #serialized_result = ET.tostring(root)
+                result_type = "XML"
                 serialized_result = pickle.dumps(search_result)
             elif isinstance(search_result, dict):
                 result_type = "JSON"
@@ -215,7 +227,7 @@ class Database(object):
 
         return None
 
-    def get_query_cache(self, limit:int=50):
+    def get_query_cache(self, limit: int=50):
         """
         Retrieve the last _limit_ entries from the query cache.
 
@@ -228,7 +240,7 @@ class Database(object):
         documents = self.dbconn[CACHE_TABLE_NAME].find().sort("_id", -1).limit(limit)
         return documents
 
-    def get_query_cache_item_result(self, id:str):
+    def get_query_cache_item_result(self, id: str):
         """
         Get a single query cache item from the database.
 
@@ -242,14 +254,13 @@ class Database(object):
         document = self.dbconn[CACHE_TABLE_NAME].find_one(filter)
         if not document:
             return None
-        
+
         result = self.reconstitute_cached_response(document)
         rough_string = ET.tostring(result.getroot(), 'utf-8')
         reparsed = MD.parseString(rough_string)
         return reparsed.toprettyxml(indent="   ")
-        #return str(ET.tostring(result.getroot()))
 
-    def get_user_id_for_email(self, email:str)->ObjectId:
+    def get_user_id_for_email(self, email: str)->ObjectId:
         """
         Return the _id field for the user identified by the given email address.
 
@@ -264,7 +275,7 @@ class Database(object):
             return user_doc["_id"]
         return None
 
-    def add_case(self, fields:dict)->bool:
+    def add_case(self, fields: dict)->bool:
         """
         Add a case to the database.
         """
@@ -272,8 +283,8 @@ class Database(object):
         record = record_from_dict(fields)
 
         # Check for missing fields
-        missing = [field for field in ['email', 'cause_number', 'description'] \
-                         if field not in record.keys()]
+        missing = [field for field in ['email', 'cause_number', 'description']
+                   if field not in record.keys()]
         if missing:
             raise MissingFieldException('Missing required field(s): {}'.format(", ".join(missing)))
 
@@ -289,13 +300,13 @@ class Database(object):
         record['cause_number'] = record['cause_number'].upper()
 
         # Create filter of unique field value combinations
-        filter = {"user_id": record["user_id"], "cause_number": record["cause_number"] }
+        filter = {"user_id": record["user_id"], "cause_number": record["cause_number"]}
 
         # Add (upsert) the record
         mongo_result = self.dbconn[CASE_TABLE].replace_one(filter, record, upsert=True)
         return True
 
-    def get_case(self, fields:dict)->dict:
+    def get_case(self, fields: dict)->dict:
         """
         Retrieve a case for this user.
         """
@@ -322,7 +333,7 @@ class Database(object):
         document = self.dbconn[CASE_TABLE].find_one(filter)
         return document
 
-    def get_cases(self, fields:dict)->dict:
+    def get_cases(self, fields: dict)->dict:
         """
         Retrieve all matching cases for this user.
 
@@ -345,12 +356,12 @@ class Database(object):
         documents = self.dbconn[CASE_TABLE].find(filter)
         return documents
 
-    def update_case(self, fields:dict)->bool:
+    def update_case(self, fields: dict)->bool:
         """
         """
         # Check for missing fields
-        missing = [field for field in ['email', 'cause_number'] \
-                         if field not in fields.keys()]
+        missing = [field for field in ['email', 'cause_number']
+                   if field not in fields.keys()]
         if missing:
             raise MissingFieldException('Missing required field(s): {}'.format(", ".join(missing)))
 
@@ -364,8 +375,7 @@ class Database(object):
         # Create lookup filter
         filter = {
             "user_id": user_id,
-            "_id": ObjectId(fields["_id"])
-            }
+            "_id": ObjectId(fields["_id"])}
 
         # Create local copy of fields
         new_vals = fields.copy()
@@ -379,10 +389,10 @@ class Database(object):
         new_vals.update(base_record())
 
         # Locate and update the matching record
-        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set": new_vals}, upsert=False)
         return mongo_result.modified_count == 1
 
-    def del_case(self, fields:dict)->bool:
+    def del_case(self, fields: dict)->bool:
         """
         """
         missing = [key for key in ['email', 'cause_number'] if key not in fields]
@@ -399,24 +409,25 @@ class Database(object):
         # Create lookup filter
         filter = {
             "user_id": user_id,
-            "cause_number": fields["cause_number"].upper()
-            }
+            "cause_number": fields["cause_number"].upper()}
 
         # Delete the case, if we can find it.
         mongo_result = self.dbconn[CASE_TABLE].remove(filter, {"justOne": True})
         return mongo_result["nRemoved"] == 1
 
-    def add_to_case(self, email:str, case_id:str, category:str, key:str, fields:dict)->bool:
+    def add_to_case(self, email: str, case_id: str, category: str, key: str, fields: dict)->bool:
         """
         Add an item, such as property or a person, to a case record.
 
         Args:
             email (str): Email address of person trying to add
             case_id (str): String version of _id field of case to be added to.
-            category (str): Category name. Can optionally contain a subcategory delimited by
-                a colon (":"). E.G. "PROPERTY:VEHICLE", "PROPERTY:REAL", "PROPERTY:BANK_ACCOUNT"
-            key (str): Application-generated key for this item, e.g., for Public Data it could
-                take the form PUBLICDATA:<db>:<ed>:<rec>
+            category (str): Category name. Can optionally contain a
+                subcategory delimited by a colon (":").
+                E.G. "PROPERTY:VEHICLE", "PROPERTY:REAL",
+                "PROPERTY:BANK_ACCOUNT"
+            key (str): Application-generated key for this item, e.g., for
+                Public Data it could take the form PUBLICDATA:<db>:<ed>:<rec>
             fields (dict): Property values for this item.
 
         Returns:
@@ -428,7 +439,7 @@ class Database(object):
         if not user_id:
             self.logger.error("database.add_to_case(): Email not found: '%s'", email)
             return False
-        
+
         # Get make sure this user owns the case.
         my_case_id = ObjectId(case_id)
         filter = {
@@ -463,21 +474,16 @@ class Database(object):
 
         # Finally, save the updated case document.
         # Create local copy of fields
-        new_vals = {key:value for key, value in case_doc.items() if key not in ['_id', 'user_id']}
-
-        # Remove columns that can't be updated
-        #for key in ['_id', 'user_id']:
-        #    if key in new_vals:
-        #        del(new_vals[key])
+        new_vals = {key: value for key, value in case_doc.items() if key not in ['_id', 'user_id']}
 
         # Add update times
         new_vals.update(base_record())
 
         # Locate and update the matching record
-        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set": new_vals}, upsert=False)
         return mongo_result.modified_count == 1
 
-    def del_from_case(self, email:str, case_id:str, category:str, key:str, fields:dict)->bool:
+    def del_from_case(self, email: str, case_id: str, category: str, key: str, fields: dict)->bool:
         """
         Delete an item, such as property or a person, from a case record.
 
@@ -499,7 +505,7 @@ class Database(object):
         if not user_id:
             self.logger.error("database.del_from_case(): Email not found: '%s'", email)
             return False
-        
+
         # Get make sure this user owns the case.
         my_case_id = ObjectId(case_id)
         filter = {
@@ -511,8 +517,8 @@ class Database(object):
             self.logger.error("database.del_from_case(): Case '%s' not found for '%s'", case_id, email)
             return False
 
-        # See if item collection exists. Return True if the collection does not exist
-        # because there is nothing to delete.
+        # See if item collection exists. Return True if the collection does
+        # not exist because there is nothing to delete.
         if "discovery" not in case_doc:
             return True
 
@@ -532,20 +538,20 @@ class Database(object):
             else:
                 del discovery[main_cat][sub_cat][key]
         except KeyError:
-            return True # It's already gone.
+            return True  # It's already gone.
 
         # Finally, save the updated case document.
         # Create local copy of fields
-        new_vals = {key:value for key, value in case_doc.items() if key not in ['_id', 'user_id']}
+        new_vals = {key: value for key, value in case_doc.items() if key not in ['_id', 'user_id']}
 
         # Add update times
         new_vals.update(base_record())
 
         # Locate and update the matching record
-        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set": new_vals}, upsert=False)
         return mongo_result.modified_count == 1
 
-    def get_case_items(self, email:str, case_id:str, category:str=None)->list:
+    def get_case_items(self, email: str, case_id: str, category: str=None)->list:
         """
         Get a list of case items by category, e.g. "PROPERTY" or "PROPERTY:VEHICLE"
 
@@ -573,7 +579,7 @@ class Database(object):
         if not user_id:
             self.logger.error("database.get_case_items(): Email not found: '%s'", email)
             return False
-        
+
         # Get make sure this user owns the case.
         filter = {
             "_id": my_case_id,
@@ -612,7 +618,7 @@ class Database(object):
 
         return discovery[main_cat]
 
-    def add_user(self, fields:dict)->bool:
+    def add_user(self, fields: dict)->bool:
         """
         """
         if "email" in fields:
@@ -629,7 +635,7 @@ class Database(object):
         mongo_result = self.dbconn[USER_TABLE].replace_one(filter, record, upsert=True)
         return True
 
-    def get_user(self, fields:dict)->dict:
+    def get_user(self, fields: dict)->dict:
         """
         """
         filter = fields.copy()
@@ -639,19 +645,19 @@ class Database(object):
         document = self.dbconn[USER_TABLE].find_one(filter)
         return document
 
-    def update_user(self, fields:dict)->dict:
+    def update_user(self, fields: dict)->dict:
         """
         """
         filter = {"email": fields['email']}
-        mongo_result = self.dbconn[USER_TABLE].update_one(filter, {"$set":fields}, upsert=False)
+        mongo_result = self.dbconn[USER_TABLE].update_one(filter, {"$set": fields}, upsert=False)
         return mongo_result.modified_count == 1
 
     # Helper to stringify ObjectId variables so they can be saved in a session.
-    def safe_dict(self, d:dict)->dict:
+    def safe_dict(self, d: dict)->dict:
         """
-        Stringify ObjectIds. Some operations try to serialize a dictionary and serialization fails
-        (for some reason) if the dict contains an ObjectId. This helper converts ObjectIds to strings.
-        The input dictionary is not affected.
+        Stringify ObjectIds. Some operations try to serialize a dictionary and
+        serialization fails (for some reason) if the dict contains an ObjectId.
+        This helper converts ObjectIds to strings. The input dictionary is not affected.
 
         Args:
             d (dict): The dictionary to process.
@@ -667,6 +673,7 @@ class Database(object):
                 result[key] = value
         return result
 
+
 def base_record()->dict:
     """
     Return a basic record with the audit flags we use in all records.
@@ -679,7 +686,8 @@ def base_record()->dict:
     """
     return {"time": time.time(), "time_str": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}
 
-def record_from_dict(fields:dict, id_fields:list=[])->dict:
+
+def record_from_dict(fields: dict, id_fields: list=[])->dict:
     """
     Create a record from a dict.
 
@@ -699,7 +707,8 @@ def record_from_dict(fields:dict, id_fields:list=[])->dict:
 
     return record
 
-def split_category(category:str):
+
+def split_category(category: str):
     """
     Split category string into category and sub-category. The category and sub-category
     are separated by a colon (":"). However, not all categories have sub-categories. This

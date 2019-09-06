@@ -16,17 +16,20 @@ from passlib.hash import sha256_crypt
 from views.decorators import is_logged_in, is_case_set
 
 from webservice import WebService
+from util.database import Database
+
 WEBSERVICE = WebService(None)
 
-from util.database import Database
 DATABASE = Database()
 DATABASE.connect()
+
 
 # Helper to create Public Data credentials from session variables
 def pd_credentials(mysession)->dict:
     return {"username": session["pd_username"], "password": session["pd_password"]}
 
-def join_results(search_type:str, prior_results:dict, new_results:list)->dict:
+
+def join_results(search_type: str, prior_results: dict, new_results: list)->dict:
     """
     Join the new results with the prior results disjunctively or conjunctively.
 
@@ -34,7 +37,7 @@ def join_results(search_type:str, prior_results:dict, new_results:list)->dict:
         search_type (str): "disjunctive" (or the results) or "conjunctive" (and the results)
         prior_results (dict): results from prior searches. (key = db+ed+rec)
         new_results (list): results from latest search.
-    
+
     Returns:
         (dict): joined results
     """
@@ -57,12 +60,13 @@ def join_results(search_type:str, prior_results:dict, new_results:list)->dict:
 
     # Now find the keys in common
     if prior_results:
-        merged_result = {key:prior_results[key] for key in prior_results.keys() & new_results_dict.keys()}
+        merged_result = {key: prior_results[key] for key in prior_results.keys() & new_results_dict.keys()}
     else:
         merged_result = new_results_dict
     return merged_result
 
-def filter_results(results:list, case_id:str, category:str):
+
+def filter_results(results: list, case_id: str, category: str):
     """
     Sets the case status property of each item in the results list.
 
@@ -87,6 +91,7 @@ def filter_results(results:list, case_id:str, category:str):
                 item.case_status = "I"
 
 vehicle_routes = Blueprint("vehicle_routes", __name__, template_folder="templates")
+
 
 @vehicle_routes.route('/search/dmv', methods=['GET', 'POST'])
 @is_logged_in
@@ -116,8 +121,8 @@ def search_dmv():
         filter_results(search_results, case_id, "PROPERTY:VEHICLE")
 
     if success:
-        #results = [search_results[key] for key in search_results.keys()]
-        results = sorted(search_results, key = lambda i: (i.case_status, i.year_make_model))
+        # results = [search_results[key] for key in search_results.keys()]
+        results = sorted(search_results, key=lambda i: (i.case_status, i.year_make_model))
 
         if not results:
             message = """
@@ -129,10 +134,11 @@ def search_dmv():
             """
             flash(message, "warning")
             return redirect(url_for('search_dmv'))
-        
+
         flash("Found {} matching vehicles.".format(len(results)), "success")
         return render_template('vehicles.html', vehicles=results)
     return render_template("search_error.html", formvariables=form, operation="Search: DMV", message=message)
+
 
 @vehicle_routes.route('/vehicle/<string:db>/<string:ed>/<string:rec>/<string:state>/', methods=['GET'])
 @is_logged_in

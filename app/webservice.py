@@ -3,9 +3,6 @@ webservice.py - Webservice for PublicData
 
 Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 import argparse
 from datetime import datetime
 import json
@@ -16,11 +13,12 @@ from util.publicdata import PublicData
 from util.zillow import Zillow
 from util.classes.dmvdetails import DmvDetails
 
+
 class WebService(object):
     """
     Encapsulates the behavior of a web service for accessing PublicData.
     """
-    def __init__ (self, zillow_id:str):
+    def __init__(self, zillow_id: str):
         """
         Class initializer.
         """
@@ -28,7 +26,15 @@ class WebService(object):
         self.public_data = PublicData()
         self.zillow = Zillow(zillow_id)
 
-    def tax_records(self, credentials:dict, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", get_zillow:bool=True, refresh:bool=False)->list:
+    def tax_records(
+            self,
+            credentials: dict,
+            search_terms: str,
+            match_type: str="all",
+            match_scope: str="name",
+            us_state: str="tx",
+            get_zillow: bool=True,
+            refresh: bool=False)->list:
         """
         Retrieve tax records throughout the given state.
 
@@ -48,7 +54,7 @@ class WebService(object):
         if not success:
             self.logger.warn(message)
             return []
-        
+
         # Convert PublicData XML into a list.
         results = []
         root = tree.getroot()
@@ -61,7 +67,7 @@ class WebService(object):
             (street, csz) = address.split(",", 1)
             street = street.split(":", 1)[0]
             source = item.find("source").text
-            parcel = {"owner": owner, "street": street.strip(), "csz": csz.strip(), "source":source, "zillow": False}
+            parcel = {"owner": owner, "street": street.strip(), "csz": csz.strip(), "source": source, "zillow": False}
             results.append(parcel)
 
         if get_zillow:
@@ -69,7 +75,7 @@ class WebService(object):
 
         return results
 
-    def zillow_data(self, properties:list)->list:
+    def zillow_data(self, properties: list)->list:
         results = []
         for parcel in properties:
             (success, message, tree) = self.zillow.search(parcel["street"], parcel["csz"])
@@ -78,7 +84,7 @@ class WebService(object):
                 parcel["zillow"] = False
                 results.append(parcel)
                 continue
-            
+
             root = tree.getroot()
             address = root.find("./response/results/result/address")
             parcel["zillow"] = True
@@ -126,17 +132,17 @@ class WebService(object):
             match_scope=match_scope,
             us_state=us_state)
 
-    def drivers_license(self, credentials:dict, search_terms:str, search_scope:str, us_state:str):
+    def drivers_license(self, credentials: dict, search_terms: str, search_scope: str, us_state: str):
         return self.public_data.drivers_license(
             credentials,
             search_terms=search_terms,
             match_scope=search_scope,
             us_state=us_state)
 
-    def driver_details(self, credentials:dict, db:str, ed:str, rec:str, us_state:str):
+    def driver_details(self, credentials: dict, db: str, ed: str, rec: str, us_state: str):
         return self.public_data.driver_details(credentials, db, ed, rec, us_state)
 
-    def dmv_details(self, credentials:dict, db:str, ed:str, rec:str, us_state:str):
+    def dmv_details(self, credentials: dict, db: str, ed: str, rec: str, us_state: str):
         """
         Retrieve Details for this record from PublicData
 
@@ -162,7 +168,7 @@ class WebService(object):
         (details.amortization_schedule, details.amortization_message) = self.amortization_schedule(amort_details)
         return (True, message, details)
 
-    def amortization_schedule(self, details:dict, normal_useful_life:int=15)->(list, str):
+    def amortization_schedule(self, details: dict, normal_useful_life: int=15)->(list, str):
         """
         Compute an amortization schedule for this asset.
         This method applies a sum-of-the-years-digits accelerate depreciation
@@ -188,7 +194,7 @@ class WebService(object):
             return ([], "Cannot depreciate an asset with no model year (2).")
         except ValueError as e:
             return ([], "Invalid year: {}".format(str(e)))
-        
+
         try:
             original_value = int(details["sold_price"])
             start_value = int(details["sold_price"])
@@ -210,7 +216,7 @@ class WebService(object):
             print(str(e))
             purchased_year = year
             message = "Unable to parse purchase date of '{}'. Used '{}' instead" \
-                    .format(details["sold_date"], year)
+                .format(details["sold_date"], year)
 
         # If the asset's purchase year is less than the model year (frequently happens with
         # motor vehicles), use the purchase year as the base year.
@@ -229,12 +235,12 @@ class WebService(object):
         if purchased_year > year:
             useful_life = normal_useful_life - (purchased_year - year)
             message = "Normal useful life of {} years reduced to remaining useful life of {} years." \
-                    .format(normal_useful_life, useful_life)
+                .format(normal_useful_life, useful_life)
             year = purchased_year
         else:
             useful_life = normal_useful_life
 
-        sum_of_years = sum(year for year in range(1, useful_life+1))
+        sum_of_years = sum(year for year in range(1, useful_life + 1))
 
         for amort_year in range(useful_life, 0, -1):
             depreciation = float(amort_year / sum_of_years) * original_value * -1
@@ -248,8 +254,8 @@ class WebService(object):
         return (schedule, message)
 
 
-def print_schedule(schedule:list, message:str, details:DmvDetails):
-    print("\n", "-"*41, sep="")
+def print_schedule(schedule: list, message: str, details: DmvDetails):
+    print("\n", "-" * 41, sep="")
     print("%-41s" % "A M O R T I Z A T I O N   S C H E D U L E\n")
     print(message)
 
@@ -268,16 +274,16 @@ def print_schedule(schedule:list, message:str, details:DmvDetails):
     else:
         purch_date = "(Unknown)"
     print("VIN    : %s" % (details.vin))
-    print("Purch  : %s for $%8.2f" % (purch_date, float(details.sold_price)/100.00))
+    print("Purch  : %s for $%8.2f" % (purch_date, float(details.sold_price) / 100.00))
     print("Titled : %s" % details.owner_name)
-    print("-"*41)
+    print("-" * 41)
     if schedule:
         print("%4s  %-11s  %-11s  %-11s" % ("Year", "Begin", "Deprec.", "End"))
     for line_item in schedule:
         print("%-4s  %9.2f  %9.2f  %9.2f" % (line_item["year"], line_item["begin_value"], line_item["depreciation"], line_item["end_value"]))
 
 
-def main(args:{}):
+def main(args: {}):
     credentials = {"username": args.username, "password": args.password}
     webservice = WebService(args.zillowid)
     """
@@ -291,10 +297,10 @@ def main(args:{}):
                 record["owner"], record["street"], record["csz"], record["source"])
         print(message)
     """
-    #print("-----M A I N------------------------------------------------------")
-    #webservice.dmv_any(args.search)
-    #print("-----P L A T E----------------------------------------------------")
-    #webservice.dmv_plate("DXZ3906")
+    # print("-----M A I N------------------------------------------------------")
+    # webservice.dmv_any(args.search)
+    # print("-----P L A T E----------------------------------------------------")
+    # webservice.dmv_plate("DXZ3906")
     print("-----V I N--------------------------------------------------------")
     (success, message, cars) = webservice.dmv_vin(credentials, "2C3KA63HX8H139624")
     if success:

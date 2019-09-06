@@ -18,12 +18,14 @@ DATABASE.connect()
 
 admin_routes = Blueprint("admin_routes", __name__, template_folder="templates")
 
+
 @admin_routes.route("/queries", methods=['GET'])
 @is_logged_in
 @is_admin_user
 def list_query_cache():
     queries = DATABASE.get_query_cache(50)
     return render_template("queries.html", queries=queries)
+
 
 @admin_routes.route("/query/<string:id>/", methods=['GET'])
 @is_logged_in

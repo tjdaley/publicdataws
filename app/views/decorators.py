@@ -2,13 +2,11 @@
 """
 decorators.py - Decorators for applied to routes/views
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 from flask import flash, redirect, session, url_for
 from functools import wraps
 
 LOGIN_FUNCTION = "login.do_login"
+
 
 # Decorator to check if user is logged in
 def is_logged_in(f):
@@ -21,6 +19,7 @@ def is_logged_in(f):
             return redirect(url_for(LOGIN_FUNCTION))
     return wrap
 
+
 # Decorator to check if user is an administrator
 def is_admin_user(f):
     @wraps(f)
@@ -31,6 +30,7 @@ def is_admin_user(f):
             flash("Unauthorized - Please Log In As An Administrator", "danger")
             return redirect(url_for(LOGIN_FUNCTION))
     return wrap
+
 
 # Decorator to check if we have an active case set on our session
 def is_case_set(f):

@@ -26,15 +26,16 @@ DATABASE.connect()
 
 login = Blueprint("login", __name__, template_folder="templates")
 
+
 @login.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm(request.form)
 
     if request.method == 'POST' and form.validate():
         fields = request.form
-        myfields = {key:value for (key, value) in fields.items()}
+        myfields = {key: value for (key, value) in fields.items()}
         myfields["password"] = sha256_crypt.hash(str(fields["password"]))
-        del myfields["confirm"] # saving that to the db defeats the purpose of encryption
+        del myfields["confirm"]  # saving that to the db defeats the purpose of encryption
         success = DATABASE.add_user(myfields)
         if success:
             flash("Your registration has been saved--Please login.", 'success')
@@ -45,12 +46,13 @@ def register():
 
     return render_template('register.html', form=form)
 
+
 @login.route('/settings', methods=['GET', 'POST'])
 @is_logged_in
 def settings():
     myfields = {"email": session['email']}
     result = DATABASE.get_user(myfields)
-    myfields = {key:value for (key, value) in result.items() if key != "password"}
+    myfields = {key: value for (key, value) in result.items() if key != "password"}
     form = SettingsForm(**myfields)
 
     # Email not found - something fishy is going on.
@@ -67,7 +69,7 @@ def settings():
             messages = ["Your settings have been updated.", "Your settings are updated.", "Your changes have been saved."]
             message = random.choice(messages)
             fields = request.form
-            myfields = {key:value for (key, value) in fields.items() if key != "password" and value}
+            myfields = {key: value for (key, value) in fields.items() if key != "password" and value}
             myfields['email'] = session['email']
             session['pd_username'] = myfields['pd_username']
             session['pd_password'] = myfields['pd_password']
@@ -76,6 +78,7 @@ def settings():
             return render_template("home.html", msg=message)
 
     return render_template('settings.html', form=form, old_data=result)
+
 
 @login.route('/login', methods=['GET', 'POST'])
 def do_login():
@@ -109,6 +112,7 @@ def do_login():
         return render_template("login.html", error=message)
 
     return render_template('login.html')
+
 
 @login.route("/logout", methods=["GET"])
 def do_logout():
