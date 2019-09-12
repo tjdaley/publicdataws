@@ -176,22 +176,10 @@ class FredUtil(object):
         return rate
 
 if __name__ == "__main__":
-    #fred = Fred()
-    # observation_start=2019-01-01&observation_end=2019-12-31&file_type=json&frequency=m&aggregation_method=avg
-    #fred.series_observations(
-    #    "MORTGAGE30US",
-    #    observation_start="2019-01-01",
-    #    observation_end="2019-12-31",
-    #    file_type="json",
-    #   frequency="m",
-    #    aggregation_method="avg")
-    #
-    #fred.series_search("mortgage")
-
     futil = FredUtil()
     print("Average 30 year mortgage rate in 2018:", futil.average_fixed_mortgage(2018))
-    print("-"*40)
+    print("-" * 40)
     futil.average_fixed_mortgage(2018, 2)
-    print("-"*40)
+    print("-" * 40)
     futil.average_fixed_mortgage(2018, 2, 5)
-    print("-"*40)
+    print("-" * 40)
