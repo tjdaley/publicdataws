@@ -9,8 +9,8 @@ from datetime import date
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from decimal import Decimal, ROUND_UP, ROUND_DOWN, ROUND_05UP, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_DOWN, ROUND_HALF_EVEN, ROUND_HALF_UP
-ROUNDING = ROUND_05UP
+from decimal import Decimal, ROUND_DOWN
+ROUNDING = ROUND_DOWN  # Default rounding method
 
 
 class FinancialCalculators(object):
@@ -55,7 +55,7 @@ class FinancialCalculators(object):
         return payment
 
     @staticmethod
-    def loan_amortization(payment_count, annual_rate, principal_value, first_payment, rounding=ROUNDING)->list:
+    def amortization_list(payment_count, annual_rate, principal_value, first_payment, rounding=ROUNDING)->list:
         """
         Calculate a loan amortization schedule.
 
@@ -103,7 +103,7 @@ class FinancialCalculators(object):
         return result
 
     @staticmethod
-    def amortization_table(interest_rate, years, payments_year, principal, addl_principal=0, start_date=date.today()):
+    def amortization_df(interest_rate, years, payments_year, principal, addl_principal=0, start_date=date.today()):
         """
         Calculate the amortization schedule given the loan details.
 
@@ -185,6 +185,7 @@ class FinancialCalculators(object):
                         .sum().to_frame().T)
 
         # Format the Date DataFrame
+        # TODO: Change to from_dict()
         payment_details = pd.DataFrame.from_items(
             [('payoff_date', [last_payment_date]),
              ('Interest Rate', [interest_rate]),
@@ -210,15 +211,19 @@ if __name__ == "__main__":
     calculator = FinancialCalculators()
     print("Payment:", calculator.payment(360, .06, 100000))
 
-    for rounding in []:  # [ROUND_05UP, ROUND_DOWN, ROUND_UP, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_DOWN, ROUND_HALF_EVEN, ROUND_HALF_UP]:
-        schedule = calculator.loan_amortization(360, .06, 100000, '2019-10-01', rounding)
+    # Test my simpler implementation. I like this because it's simple, but it has some
+    # bothersome rounding errors.
+    for rounding in [ROUND_DOWN]:  # [ROUND_05UP, ROUND_DOWN, ROUND_UP, ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_DOWN, ROUND_HALF_EVEN, ROUND_HALF_UP]:
+        schedule = calculator.amortization_list(360, .06, 100000, '2019-10-01', rounding)
         payment = schedule[-1]
         print(payment.date, payment.beginning_principal, payment.interest, payment.payment, payment.ending_principal)
 
-    (table, summary) = calculator.amortization_table(.06, 30, 12, 100000)
+    # More robust implementation, slower, but rounding is very good.
+    (table, summary) = calculator.amortization_df(.06, 30, 12, 100000)
     print(summary)
     print(table)
 
+    # Just curious about the speed of the two payment calculations.
     import timeit
     print("NUMPY:", timeit.timeit(numpy_test, number=100000))
     print("NONUM:", timeit.timeit(no_numpy_test, number=100000))
