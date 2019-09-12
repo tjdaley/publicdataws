@@ -7,9 +7,6 @@ TODO: Need to pass Zillow API key on each call so each user can have their own a
 
 Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 from datetime import datetime
 import os
 import requests
@@ -22,11 +19,12 @@ from .logger import Logger
 SEARCH_URL = "https://www.zillow.com/webservice/GetSearchResults.htm?zws-id={}&address={}&citystatezip={}"
 SOURCE = "ZILLOW"
 
+
 class Zillow(object):
     """
     Encapsulates an interface into PublicData's web site via Python.
     """
-    def __init__(self, zws_id:str):
+    def __init__(self, zws_id: str):
         """
         Class Initializer.
         """
@@ -67,7 +65,7 @@ class Zillow(object):
 
         return success
 
-    def load_xml(self, url:str, refresh=False, filename:str=None)->(bool, str, object):
+    def load_xml(self, url: str, refresh=False, filename: str=None)->(bool, str, object):
         """
         Load XML either from a cached file or a URL. If the cache file exists, we'll load from there.
         If the cache file does not exist, we'll load from the URL.
@@ -137,7 +135,7 @@ class Zillow(object):
 
         return (False, "Programmer Error", None)
 
-    def search(self, street_address:str, city_state_zip:str, refresh:bool=False)->(bool, str, object):
+    def search(self, street_address: str, city_state_zip: str, refresh: bool=False)->(bool, str, object):
         """
         Search for Tax Records by state. Results are cached for one day (until midnight, not necessarily 24 hours).
 
@@ -153,8 +151,7 @@ class Zillow(object):
                                  The *object* is an ET tree, if successful otherwise NoneType.
         """
         try:
-            url = SEARCH_URL \
-                  .format(self.zws_id, street_address, city_state_zip)
+            url = SEARCH_URL.format(self.zws_id, street_address, city_state_zip)
 
             # Load XML tree from file or URL
             return self.load_xml(url, refresh=refresh)

@@ -5,9 +5,6 @@ Based on documentation available at: http://www.publicdata.com/pdapidocs/index.p
 
 Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 import base64
 from datetime import datetime
 import os
@@ -26,7 +23,8 @@ from .classes.dldetails import DlDetails
 
 LOGIN_URL = "https://login.publicdata.com/pdmain.php/logon/checkAccess?disp=XML&login_id={}&password={}"
 SOURCE = "PUBLICDATA"
-MAX_PAGES = 10 # Most number of pages that we'll pull before telling user the request was too broad
+MAX_PAGES = 10  # Most number of pages that we'll pull before telling user the request was too broad
+
 
 class PublicData(object):
     """
