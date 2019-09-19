@@ -73,7 +73,7 @@ class PublicData(object):
 
         return success
 
-    def load_xml(self, url:str, refresh=False, filename:str=None)->(bool, str, object):
+    def load_xml(self, url: str, refresh=False, filename: str=None)->(bool, str, object):
         """
         Load XML either from a cached file or a URL. If the cache file exists, we'll load from there.
         If the cache file does not exist, we'll load from the URL.
@@ -101,7 +101,6 @@ class PublicData(object):
                 response = self.database.check_cache(SOURCE, url)
                 if response:
                     self.logger.debug("Loading from cache.")
-                    #print(ET.dump(response))
                     return (True, "OK", response)
 
             self.logger.debug("Loading from URL.")
@@ -111,7 +110,6 @@ class PublicData(object):
 
             # Convert response from stream of bytes to string
             content = response.content.decode()
-            #print(content)
 
             # Deserialize response to XML element tree
             tree = ET.ElementTree(ET.fromstring(content))
@@ -144,7 +142,7 @@ class PublicData(object):
 
         return (False, "Programmer Error", None)
 
-    def login(self, username:str, password:str)->(bool, str, dict):
+    def login(self, username: str, password: str)->(bool, str, dict):
         """
         Attempt to login to the PublicData servers.
 
@@ -192,7 +190,7 @@ class PublicData(object):
             # Successful login . . . keep going.
             session_id = child.find("sessionid").text
             login_id = child.find("dlnumber").text
-            
+
             child = root.find("servers")
             search_server = child.find("searchserver").text
             login_server = child.find("loginserver").text
@@ -218,7 +216,7 @@ class PublicData(object):
 
         return (False, message)
 
-    def tax_records(self, credentials:dict, search_terms:str, match_type:str="all", match_scope:str="name", us_state:str="tx", refresh:bool=False)->(bool, str, object):
+    def tax_records(self, credentials: dict, search_terms: str, match_type: str="all", match_scope: str="name", us_state: str="tx", refresh: bool=False)->(bool, str, object):
         """
         Search for Tax Records by state. Results are cached for one day (until midnight, not necessarily 24 hours).
 
@@ -248,14 +246,14 @@ class PublicData(object):
 
     def drivers_license(
         self,
-        credentials:dict,
-        search_terms:str,
-        exemption:str=None,
-        match_type:str="all",
-        match_scope:str="main",
-        us_state:str="tx",
-        refresh:bool=False
-        )->(bool, str, list):
+        credentials: dict,
+        search_terms: str,
+        exemption: str=None,
+        match_type: str="all",
+        match_scope: str="main",
+        us_state: str="tx",
+        refresh: bool=False
+    )->(bool, str, list):
         """
         Search Driver's License records.
 
@@ -267,7 +265,7 @@ class PublicData(object):
             us_state (str): U.S. state to search. "tx" and "fl" is the only legal values
             refresh (bool): True to force a load from the remote URL; False to use recently cached result
             exemption (str): Exemption code to use for this search. Illegal to search without an exemption
-        
+
         Returns:
             (
                 (bool): Success?
@@ -302,7 +300,7 @@ class PublicData(object):
         # Loop through paged results.
         more_pages = True
         searchmoreid = None
-        max_pages = MAX_PAGES # Not going to pull more than this many pages, no matter how many there are.
+        max_pages = MAX_PAGES  # Not going to pull more than this many pages, no matter how many there are.
         while more_pages and max_pages > 0:
             (success, message, tree) = self.search(credentials,
                                                    db_name=db_name,
@@ -334,10 +332,10 @@ class PublicData(object):
             # If there are more, get reference to the next page id.
             if more_pages:
                 searchmoreid = root.findall("./results")[0].get("searchmoreid")
-                
+
         return (success, message, summaries)
 
-    def driver_details(self, credentials, db, ed, rec, us_state, exemption:str=None, refresh:bool=False)->(bool, str, object):
+    def driver_details(self, credentials, db, ed, rec, us_state, exemption: str=None, refresh: bool=False)->(bool, str, object):
         exemption = exemption or {
             'co': "tacDMV=DPPA-01",
             'fl': "tacDMV=DPPAFL-03",
@@ -359,14 +357,14 @@ class PublicData(object):
 
     def dmv(
         self,
-        credentials:dict,
-        search_terms:str,
-        exemption:str=None,
-        match_type:str="all",
-        match_scope:str="name",
-        us_state:str="tx",
-        refresh:bool=False
-        )->(bool, str, list):
+        credentials: dict,
+        search_terms: str,
+        exemption: str=None,
+        match_type: str="all",
+        match_scope: str="name",
+        us_state: str="tx",
+        refresh: bool=False
+    )->(bool, str, list):
         """
         Search DMV records.
 
@@ -378,7 +376,7 @@ class PublicData(object):
             us_state (str): U.S. state to search. "tx" is the only useful value
             refresh (bool): True to force a load from the remote URL; False to use recently cached result
             exemption (str): Exemption code to use for this search. Illegal to search without an exemption
-        
+
         Returns:
             (
                 (bool): Success?
@@ -418,7 +416,7 @@ class PublicData(object):
         # Loop through paged results.
         more_pages = True
         searchmoreid = None
-        max_pages = MAX_PAGES # Not going to pull more than this many pages, no matter how many there are.
+        max_pages = MAX_PAGES  # Not going to pull more than this many pages, no matter how many there are.
         while more_pages and max_pages > 0:
             (success, message, tree) = self.search(credentials,
                                                    db_name=db_name,
@@ -451,10 +449,10 @@ class PublicData(object):
             # If there are more, get reference to the next page id.
             if more_pages:
                 searchmoreid = root.findall("./results")[0].get("searchmoreid")
-                
+
         return (success, message, summaries)
 
-    def dmv_details(self, credentials, db, ed, rec, us_state, exemption:str=None, refresh:bool=False)->(bool, str, DmvDetails):
+    def dmv_details(self, credentials, db, ed, rec, us_state, exemption: str=None, refresh: bool=False)->(bool, str, DmvDetails):
         exemption = exemption or {
             'co': "tacDMV=DPPA-01",
             'fl': "tacDMV=DPPAFL-03",
@@ -478,26 +476,27 @@ class PublicData(object):
 
         return (success, message, details)
 
-    def details(self, credentials, db_name:str, record_id:str, edition:str, exemption:str=None, refresh:bool=False)->(bool, str, object):
+    def details(self, credentials, db_name: str, record_id: str, edition: str, exemption: str=None, refresh: bool=False)->(bool, str, object):
         (success, msg, keys) = self.login(username=credentials["username"], password=credentials["password"])
         url = "http://{}/pddetails.php?db={}&rec={}&ed={}&dlnumber={}&id={}&disp=XML" \
-               .format(keys["search_server"], db_name, record_id, edition, keys["login_id"], keys["id"])
+              .format(keys["search_server"], db_name, record_id, edition, keys["login_id"], keys["id"])
         if exemption:
             url += "&{}".format(exemption)
         return self.load_xml(url, refresh=refresh)
 
     def search(
         self,
-        credentials:dict,
-        db_name:str,
-        search_terms:str,
-        match_type:str="all",
-        match_scope:str="name",
-        us_state:str="tx",
-        refresh:bool=False,
-        search_type:str="advanced",
-        exemption:str=None,
-        searchmoreid:str=None)->(bool, str, object):
+        credentials: dict,
+        db_name: str,
+        search_terms: str,
+        match_type: str="all",
+        match_scope: str="name",
+        us_state: str="tx",
+        refresh: bool=False,
+        search_type: str="advanced",
+        exemption: str=None,
+        searchmoreid: str=None
+    )->(bool, str, object):
         """
         Search for Tax Records by state. Results are cached for one day (until midnight, not necessarily 24 hours).
 
@@ -543,6 +542,7 @@ class PublicData(object):
 
         return (False, message, None)
 
+
 def error_message(root)->str:
     """
     Find an error message in XML that has indicated an error.
@@ -574,19 +574,21 @@ def error_message(root)->str:
 
     return message
 
+
 def today_yyyymmdd()->str:
     """
     Get the current date in YYYYMMDD format.
 
     Args:
         None.
-    
+
     Returns:
         (str): Today's date in YYYYMMDD format.
     """
     return datetime.now().strftime("%Y%m%d")
 
-def normalize_search_terms(search_terms:str)->str:
+
+def normalize_search_terms(search_terms: str)->str:
     """
     Normalize the search terms so that searching for "A b c" is the same as searching for
     "a b C", "B C A", etc.
