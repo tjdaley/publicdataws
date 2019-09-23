@@ -3,14 +3,12 @@ dmvsummary.py - Standard representation of a DMV summary record.
 
 Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 import hashlib
 import re
 import xml.etree.ElementTree as ET
 
 from .baserecord import BaseRecord
+
 
 def clean_string(s):
     # Remove punctuation
@@ -20,6 +18,7 @@ def clean_string(s):
     result = re.sub(r'\s{2,}', ' ', result)
     return result
 
+
 def transform_tx_year_make_model(s):
     try:
         result = (s.split(":")[1]).strip()
@@ -28,6 +27,7 @@ def transform_tx_year_make_model(s):
 
     return result
 
+
 def transform_tx_plate(s):
     try:
         result = (s.split(":")[1]).strip()
@@ -35,6 +35,7 @@ def transform_tx_plate(s):
         result = s
 
     return result
+
 
 def transform_co_owner(s):
     try:
@@ -45,7 +46,7 @@ def transform_co_owner(s):
 
     if result[-1:] == "/":
         result = result[:-1]
-    
+
     return clean_string(result)
 
 MAPPINGS = {}
@@ -69,6 +70,7 @@ MAPPINGS["PUBLICDATA"]["CO"] = [
     {"path": ".", "prop": "rec", "attr": "rec", "transform": None}
 ]
 
+
 class DmvSummary(BaseRecord):
     """
     Department of Motor Vehicles record.
@@ -90,7 +92,7 @@ class DmvSummary(BaseRecord):
         self.state = None
         self.hash = None
 
-        self.case_status = "N" # (I)ncluded, e(X)cluded, or (N)either
+        self.case_status = "N"  # (I)ncluded, e(X)cluded, or (N)either
 
     def __str__(self):
         return "Owner name: {} || VIN: {} || Year/MakeModel: {} || Plate: {} || Prev Plate: {} || Data Source: {} || Source: {} || State: {}" \
@@ -102,7 +104,7 @@ class DmvSummary(BaseRecord):
         """
         return "{}:{}.{}.{}".format(self.source, self.db, self.ed, self.rec)
 
-    def from_xml(self, root, source:str, state:str):
+    def from_xml(self, root, source: str, state: str):
         """
         Parses given XML tree into our standard format.
 
@@ -132,7 +134,7 @@ class DmvSummary(BaseRecord):
 
                 if value:
                     if mapping["transform"]:
-                        value  = mapping["transform"](value)
+                        value = mapping["transform"](value)
                     setattr(self, mapping["attr"], value)
 
         hash_input = "{}{}{}{}".format(self.owner_name, self.year_make_model, self.plate, self.prev_plate)
