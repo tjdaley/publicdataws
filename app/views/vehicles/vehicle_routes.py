@@ -133,7 +133,7 @@ def search_dmv():
             field that would return more than 1000 results, the second explanation probably applies.
             """
             flash(message, "warning")
-            return redirect(url_for('search_dmv'))
+            return redirect(url_for('vehicle_routes.search_dmv'))
 
         flash("Found {} matching vehicles.".format(len(results)), "success")
         return render_template('vehicles.html', vehicles=results)
