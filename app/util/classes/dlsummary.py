@@ -3,14 +3,12 @@ dlsummary.py - Standard representation of a Driver's License summary record.
 
 Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 import hashlib
 import re
 import xml.etree.ElementTree as ET
 
 from .baserecord import BaseRecord
+
 
 def clean_string(s):
     # Remove punctuation
@@ -19,6 +17,7 @@ def clean_string(s):
     # Remove any resulting multiple spaces
     result = re.sub(r'\s{2,}', ' ', result)
     return result
+
 
 def fl_dob(s):
     # Extract DOB from string
@@ -36,6 +35,7 @@ def fl_dob(s):
         yyyymmdd[0:4]
     )
 
+
 def fl_dl_number(s):
     # Extract the driver's license number from a string.
     # Example input: "DL Number: P235210603090"
@@ -45,6 +45,7 @@ def fl_dl_number(s):
         return s
 
     return parts[1].strip()
+
 
 def fl_address(s):
     # Extract and format the address.
@@ -84,6 +85,7 @@ MAPPINGS["PUBLICDATA"]["FL"] = [
     {"path": ".", "prop": "rec", "attr": "rec", "transform": None}
 ]
 
+
 class DlSummary(BaseRecord):
     """
     Driver's License record.
@@ -105,7 +107,7 @@ class DlSummary(BaseRecord):
         self.state = None
         self.hash = None
 
-        self.case_status = "N" # (I)ncluded, e(X)cluded, or (N)either
+        self.case_status = "N"  # (I)ncluded, e(X)cluded, or (N)either
 
     def __str__(self):
         return "Driver name: {} || DOB: {} || Source: {} || State: {}" \
@@ -117,7 +119,7 @@ class DlSummary(BaseRecord):
         """
         return "{}:{}.{}.{}".format(self.source, self.db, self.ed, self.rec)
 
-    def from_xml(self, root, source:str, state:str):
+    def from_xml(self, root, source: str, state: str):
         """
         Parses given XML tree into our standard format.
 
@@ -147,9 +149,8 @@ class DlSummary(BaseRecord):
 
                 if value:
                     if mapping["transform"]:
-                        value  = mapping["transform"](value)
+                        value = mapping["transform"](value)
                     setattr(self, mapping["attr"], value)
 
         hash_input = "{}{}".format(self.driver_name, self.dob)
         self.hash = hashlib.md5(hash_input.encode())
-                
