@@ -17,7 +17,7 @@ from passlib.hash import sha256_crypt
 from views.decorators import is_logged_in, is_case_set
 
 from webservice import WebService
-WEBSERVICE = None
+WEBSERVICE = WebService(None)
 
 
 # Helper to create Public Data credentials from session variables
@@ -36,13 +36,13 @@ def search_drivers(search_type, search_terms, search_state):
         if not results:
             message = """
             No drivers found that match ALL the search criteria. This can be for two reasons:
-            (1) There really aren't any driverss that match the combined search criteria; or
+            (1) There really aren't any drivers that match the combined search criteria; or
             (2) The search criteria were too broad which resulted in the search results to be truncated thus
             reducing the number of drivers that matched all criteria. If you used a criterion in the "entire record"
             field that would return more than 1000 results, the second explanation probably applies.
             """
             flash(message, "warning")
-            return redirect(url_for('search_dl'))
+            return redirect(url_for('driver_routes.search_dl'))
 
         flash("Found {} matching drivers.".format(len(results)), "success")
 
