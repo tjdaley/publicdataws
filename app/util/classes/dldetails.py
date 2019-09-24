@@ -3,13 +3,11 @@ dldetails.py - Standard representation of a Driver's License record.
 
 Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 import re
 import xml.etree.ElementTree as ET
 
 from .baserecord import BaseRecord
+
 
 def clean_string(s):
     # Remove punctuation
@@ -19,8 +17,10 @@ def clean_string(s):
     result = re.sub(r'\s{2,}', ' ', result)
     return result
 
+
 def make_street_link(s):
     return re.sub(r'\s', '+', clean_string(s))
+
 
 def fl_first_name(s):
     # Sample input: "PAXTON,ERIC JAMES"
@@ -31,6 +31,7 @@ def fl_first_name(s):
     parts = parts[1].split(" ", 2)
     return parts[0].strip()
 
+
 def fl_middle_name(s):
     # Sample input: "PAXTON,ERIC JAMES"
     parts = s.split(",")
@@ -40,6 +41,7 @@ def fl_middle_name(s):
     parts = parts[1].split(" ", 2)
     return parts[1].strip()
 
+
 def fl_last_name(s):
     # Sample input: "PAXTON,ERIC JAMES"
     parts = s.split(",")
@@ -48,8 +50,10 @@ def fl_last_name(s):
 
     return parts[0].strip()
 
+
 def fl_suffix_name(s):
     pass
+
 
 def tx_city(s):
     # Extract the city name
@@ -57,11 +61,13 @@ def tx_city(s):
     parts = s.split(" ")
     return " ".join(parts[0:-1])
 
+
 def tx_zip_code(s):
     # Extract the ZIP Code
     # Example input: "MCKINNEY 75070"
     parts = s.split(" ")
     return parts[-1]
+
 
 class DlDetails(BaseRecord):
     """
@@ -130,4 +136,3 @@ class DlDetails(BaseRecord):
         return "{} {} {} {} {}".format(
             self.first_name, self.middle_name, self.last_name, self.suffix, self.dob
         )
-               
