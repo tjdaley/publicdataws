@@ -3,13 +3,11 @@ dmv.py - Standard representation of a DMV record.
 
 Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 import re
 import xml.etree.ElementTree as ET
 
 from .baserecord import BaseRecord
+
 
 def clean_string(s):
     # Remove punctuation
@@ -18,6 +16,7 @@ def clean_string(s):
     # Remove any resulting multiple spaces
     result = re.sub(r'\s{2,}', ' ', result)
     return result
+
 
 def money(s):
     try:
@@ -43,8 +42,8 @@ MAPPINGS["PUBLICDATA"]["TX"] = [
     {"label": "Renewal Notice City", "attr": "notice_city"},
     {"label": "Renewal Notice State", "attr": "notice_state"},
     {"label": "Renewal Notice ZIP Code", "attr": "notice_zip"},
-    {"label": "License Plate Number", "prop":"formattedplate", "attr": "plate"},
-    {"label": "Previous License Plate Number", "prop":"formattedplate", "attr": "prev_plate"},
+    {"label": "License Plate Number", "prop": "formattedplate", "attr": "plate"},
+    {"label": "Previous License Plate Number", "prop": "formattedplate", "attr": "prev_plate"},
     {"label": "Title Date", "prop": "formatteddate", "attr": "title_date"},
     {"label": "Vehicle Sold Date", "attr": "sold_date"},
     {"label": "Vehicle Sales Price", "attr": "sold_price", "transform": money},
@@ -56,7 +55,7 @@ MAPPINGS["PUBLICDATA"]["TX"] = [
     {"label": "Vehicle Class Code", "attr": "class_code"},
     {"label": "Vehicle Major Color[Color Group]", "attr": "main_color"},
     {"label": "Vehicle Minor Color[Color Group]", "attr": "other_color"},
-    {"label": "VIN Number", "prop":"formattedvin", "attr": "vin"}
+    {"label": "VIN Number", "prop": "formattedvin", "attr": "vin"}
 ]
 MAPPINGS["PUBLICDATA"]["CO"] = [
     {"label": "Owner 1", "attr": "owner_name", "transform": clean_string},
@@ -70,8 +69,8 @@ MAPPINGS["PUBLICDATA"]["CO"] = [
     {"label": "Mail City", "attr": "notice_city"},
     {"label": "Mail State", "attr": "notice_state"},
     {"label": "Mail ZIP Code", "attr": "notice_zip"},
-    {"label": "Lic. Plate", "prop":"formattedplate", "attr": "plate"},
-    {"label": "Previous License Plate", "prop":"formattedplate", "attr": "prev_plate"},
+    {"label": "Lic. Plate", "prop": "formattedplate", "attr": "plate"},
+    {"label": "Previous License Plate", "prop": "formattedplate", "attr": "prev_plate"},
     {"label": "Tran. Date", "prop": "formatteddate", "attr": "title_date"},
     {"label": "Purchase Date", "prop": "formatteddate", "attr": "sold_date"},
     {"label": "Purchase Price", "attr": "sold_price"},
@@ -84,7 +83,9 @@ MAPPINGS["PUBLICDATA"]["CO"] = [
     {"label": "VIN", "attr": "vin"}
 ]
 
+
 class DmvDetails(BaseRecord):
+    MAPPINGS = MAPPINGS
     """
     Department of Motor Vehicles record.
     """
@@ -135,49 +136,3 @@ class DmvDetails(BaseRecord):
         return "{} {} {} {} {}".format(
             self.owner_name, self.owner_street, self.owner_city, self.owner_state, self.owner_zip
         )
-
-    def from_xml(self, root, source:str, state:str):
-        """
-        Parses given XML tree into our standard format.
-
-        Args:
-            root (ET): XML element to Process
-            source (str): Source database, e.g. "PUBLICDATA"
-            state (str): U.S. State, e.g. "TX"
-        """
-        if source.upper() not in MAPPINGS:
-            raise ValueError("No mappings for this source: {}".format(source))
-
-        if state.upper() not in MAPPINGS[source]:
-            raise ValueError("No {} mappings for this state: {}".format(source, state))
-
-        mappings = MAPPINGS[source.upper()][state.upper()]
-
-        # ET.dump(root)
-
-        for mapping in mappings:
-            path = ".//field[@label='{}']".format(mapping["label"])
-            #print("looking for", path)
-            elem = root.findall(path)
-            if elem:
-                if "prop" in mapping:
-                    value = elem[0].get(mapping["prop"])
-                else:
-                    value = elem[0].text
-
-                #print("\tfound:", value)
-                if value:
-                    # See if we need to transform the data in any way.
-                    if "transform" in mapping and mapping["transform"]:
-                        value  = mapping["transform"](value)
-
-                    # If the target attribute already has a value, append this value
-                    # to the existing value.
-                    if getattr(self, mapping["attr"]):
-                        existing_value = getattr(self, mapping["attr"])
-                        value = existing_value + " / " + value
-                    setattr(self, mapping["attr"], value)
-            else:
-                #print("\tnot found")
-                pass
-                
