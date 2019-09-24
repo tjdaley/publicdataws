@@ -95,7 +95,7 @@ class Zillow(object):
                     self.logger.debug("Loading from cache.")
                     return (True, "OK", response)
 
-            self.logger.debug("Loading from URL.")
+            self.logger.debug("Loading from URL. %s", url)
 
             # Retrieve response from server
             response = requests.get(url, allow_redirects=False)
@@ -135,7 +135,7 @@ class Zillow(object):
 
         return (False, "Programmer Error", None)
 
-    def search(self, street_address: str, city_state_zip: str, refresh: bool=False)->(bool, str, object):
+    def search(self, street_address: str, city_state_zip: str, zwsid: str, refresh: bool=True)->(bool, str, object):
         """
         Search for Tax Records by state. Results are cached for one day (until midnight, not necessarily 24 hours).
 
@@ -151,7 +151,7 @@ class Zillow(object):
                                  The *object* is an ET tree, if successful otherwise NoneType.
         """
         try:
-            url = SEARCH_URL.format(self.zws_id, street_address, city_state_zip)
+            url = SEARCH_URL.format(zwsid, street_address, city_state_zip)
 
             # Load XML tree from file or URL
             return self.load_xml(url, refresh=refresh)

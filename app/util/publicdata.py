@@ -8,18 +8,22 @@ Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 import base64
 from datetime import datetime
 import os
+import re
 import requests
 import xml.etree.ElementTree as ET
 import xml
 
 from .database import Database
 from .logger import Logger
+from .all_states import StateAbbreviations
 
 from .classes.dmvdetails import DmvDetails
 from .classes.dmv_lienholder import DmvLienHolder
 from .classes.dmvsummary import DmvSummary
 from .classes.dlsummary import DlSummary
 from .classes.dldetails import DlDetails
+from .classes.rpdetails import RealPropertyDetails
+from .classes.rpsummary import RealPropertySummary
 
 LOGIN_URL = "https://login.publicdata.com/pdmain.php/logon/checkAccess?disp=XML&login_id={}&password={}"
 SOURCE = "PUBLICDATA"
@@ -476,6 +480,110 @@ class PublicData(object):
 
         return (success, message, details)
 
+    def real_property(
+        self,
+        credentials: dict,
+        search_terms: str,
+        match_type: str="all",
+        match_scope: str="name",
+        us_state: str="tx",
+        refresh: bool=False
+    )->(bool, str, list):
+        """
+        Search Real Property records.
+
+        Args:
+            credentials (dict): username and password for Public Data service.
+            search_terms (str): The text being searched
+            match_type (str): "all" or "any" depending on how to want to search for each word in search_terms
+            match_scope (str): Type of search: "main", "name"
+            us_state (str): U.S. state to search, "*" = search all states
+            refresh (bool): True to force a load from the remote URL; False to use recently cached result
+
+        Returns:
+            (
+                (bool): Success?
+                (str): Message explaining any error that's reported.
+                (list): List of RealPropertySummary instances
+            )
+        """
+        valid_states = StateAbbreviations
+        if us_state.lower() not in valid_states and us_state != "*":
+            message = "Cannot search for real property in {}. Can only search {}.".format(us_state, ", ".join(valid_states))
+            return (False, message, [])
+
+        if match_type.lower() not in ['all', 'any']:
+            return (False, "Invalid match type: {}. Must be either 'any' or 'all'.".format(match_type), [])
+
+        valid_scopes = ['main', 'name']
+        if match_scope.lower() not in valid_scopes:
+            message = "Invalid match scope: {}. Must be one of: {}".format(match_scope, ", ".join(valid_scopes))
+            return (False, message, [])
+
+        # Slight variation in database name, depending on which state
+        if us_state == "*":
+            db_name = f"grp_cad_advanced_{match_scope.lower()}"
+        else:
+            db_name = f"grp_cad_{us_state.lower()}_advanced_{match_scope.lower()}"
+        summaries = []
+
+        # Loop through paged results.
+        more_pages = True
+        searchmoreid = None
+        max_pages = MAX_PAGES  # Not going to pull more than this many pages, no matter how many there are.
+        while more_pages and max_pages > 0:
+            (success, message, tree) = self.search(credentials,
+                                                   db_name=db_name,
+                                                   search_terms=search_terms,
+                                                   match_scope=match_scope,
+                                                   searchmoreid=searchmoreid)
+
+            # If we encoutered a problem, return whatever we already accumluated, if anything
+            if not success:
+                return (False, message, summaries)
+
+            # Successful search (meaning no errors)
+            # Append results to our list of summaries are accumulating
+            max_pages -= 1
+            root = tree.getroot()
+            properties = root.findall("./results/record")
+            for item in properties:
+                rp_summary = RealPropertySummary()
+                rp_summary.from_xml(item, SOURCE, us_state.upper())
+                summaries.append(rp_summary)
+
+            # See if there are other pages of results to process.
+            # print("IS MORE?",(root.findall("./results")[0].get("ismore")).lower())
+            try:
+                more_pages = (root.findall("./results")[0].get("ismore")).lower() == "true"
+            except IndexError:
+                more_pages = False
+
+            # If there are more, get reference to the next page id.
+            if more_pages:
+                searchmoreid = root.findall("./results")[0].get("searchmoreid")
+
+        return (success, message, summaries)
+
+    def property_details(self, credentials: dict, db: str, ed: str, rec: str, us_state: str):
+        (success, message, tree) = self.details(credentials, db, rec, ed, None, False)
+        details = None
+        if success:
+            root = tree.getroot()
+
+            # Extract county name from source attribution.
+            # Example: <dataset label="Collin County (Texas) - Central Appraisal District" rec="52513587">
+            attribution = root.findall("./dataset")[0].get("label")
+            county_regex = r"^([A-Za-z\s]*)"
+            matches = re.findall(county_regex, attribution)
+            county = matches[0].replace(" County", "").strip()
+
+            fields = root.findall("./dataset/dataitem/textdata")
+            details = RealPropertyDetails(county=county)
+            details.from_xml(fields[0], SOURCE, us_state)
+
+        return (success, message, details)
+
     def details(self, credentials, db_name: str, record_id: str, edition: str, exemption: str=None, refresh: bool=False)->(bool, str, object):
         (success, msg, keys) = self.login(username=credentials["username"], password=credentials["password"])
         url = "http://{}/pddetails.php?db={}&rec={}&ed={}&dlnumber={}&id={}&disp=XML" \
@@ -498,7 +606,7 @@ class PublicData(object):
         searchmoreid: str=None
     )->(bool, str, object):
         """
-        Search for Tax Records by state. Results are cached for one day (until midnight, not necessarily 24 hours).
+        Search for records. Results are cached for one day (until midnight, not necessarily 24 hours).
 
         Args:
             credentials (dict): username and password

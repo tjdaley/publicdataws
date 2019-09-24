@@ -33,7 +33,6 @@ class WebService(object):
             match_type: str="all",
             match_scope: str="name",
             us_state: str="tx",
-            get_zillow: bool=True,
             refresh: bool=False)->list:
         """
         Retrieve tax records throughout the given state.
@@ -50,53 +49,45 @@ class WebService(object):
         Returns:
             (dict): Dictionary of results if successful.
         """
-        (success, message, tree) = self.public_data.tax_records(credentials, search_terms, match_type, match_scope, us_state, refresh)
+        (success, message, results) = self.public_data.real_property(credentials, search_terms, match_type, match_scope, us_state, refresh)
         if not success:
             self.logger.warn(message)
             return []
 
-        # Convert PublicData XML into a list.
-        results = []
+        # remove items that do not have an address. Some counties in some states have what
+        # appear to be blank records.
+        results = [parcel for parcel in results if parcel.property_address != ""]
+
+        return (success, "OK", results)
+
+    def zillow_data(self, parcel, zwsid: str)->list:
+        street = parcel.property_street
+        csz = f"{parcel.property_city}, {parcel.property_state} {parcel.property_zip}"
+        (success, message, tree) = self.zillow.search(street, csz, zwsid)
+        if not success:
+            self.logger.error(f"Error retrieving ZILLOW data for {street} / {csz}: {message}")
+            parcel.zillow = False
+            return parcel
+
         root = tree.getroot()
-        items = root.findall("./results/record")
-        self.logger.debug("Retrieved %d tax records.", len(items))
+        address = root.find("./response/results/result/address")
+        parcel.zillow = True
+        parcel.street = address.find("street").text
+        parcel.csz = "{}, {} {}".format(address.find("city").text, address.find("state").text, address.find("zipcode").text)
+        parcel.latitide = address.find("latitude").text
+        parcel.longitude = address.find("longitude").text
+        parcel.zestimate = float(root.find("./response/results/result/zestimate/amount").text)
+        details_link = root.find("./response/results/result/links/homedetails").text
+        comps_link = root.find("./response/results/result/links/comparables").text
+        parcel.zbranding = '<a href="{}">See more details for {} on Zillow.</a>'.format(details_link, parcel.property_street)
+        parcel.comps_link = comps_link
+        return parcel
 
-        for item in items:
-            owner = item.find("disp_fld1").text
-            address = item.find("disp_fld2").text
-            (street, csz) = address.split(",", 1)
-            street = street.split(":", 1)[0]
-            source = item.find("source").text
-            parcel = {"owner": owner, "street": street.strip(), "csz": csz.strip(), "source": source, "zillow": False}
-            results.append(parcel)
-
+    def property_details(self, credentials: dict, db: str, ed: str, rec: str, us_state: str, get_zillow: bool, zwsid: str):
+        (success, message, result) = self.public_data.property_details(credentials, db, ed, rec, us_state)
         if get_zillow:
-            results = self.zillow_data(results)
-
-        return results
-
-    def zillow_data(self, properties: list)->list:
-        results = []
-        for parcel in properties:
-            (success, message, tree) = self.zillow.search(parcel["street"], parcel["csz"])
-            if not success:
-                self.logger.error("Error retrieving ZILLOW data for %s, %s: %s", parcel["street"], parcel["csz"], message)
-                parcel["zillow"] = False
-                results.append(parcel)
-                continue
-
-            root = tree.getroot()
-            address = root.find("./response/results/result/address")
-            parcel["zillow"] = True
-            parcel["street"] = address.find("street").text
-            parcel["csz"] = "{}, {} {}".format(address.find("city").text, address.find("state").text, address.find("zipcode").text)
-            parcel["latitide"] = address.find("latitude").text
-            parcel["longitude"] = address.find("longitude").text
-            parcel["zestimate"] = float(root.find("./response/results/result/zestimate/amount").text)
-            details_link = root.find("./response/results/result/links/homedetails").text
-            parcel["zbranding"] = '<a href="{}">See more details for {} on Zillow.</a>'.format(details_link, parcel["street"])
-            results.append(parcel)
-        return results
+            result = self.zillow_data(result, zwsid)
+        return (success, message, result)
 
     def dmv_any(self, credentials, search_terms, us_state="tx"):
         return self.__dmv(credentials, search_terms, "main", us_state)
