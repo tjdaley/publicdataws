@@ -97,46 +97,79 @@ var controller = {
 
     setCase:function (event, rivets_binding)
     {
-        let my_case = rivets_binding.data.case;
         let button = event.target;
-        let cause_number = button.getAttribute("data-cause-number");
-        let description = button.getAttribute("data-description");
-        let id = event.target.getAttribute("data-id");
-        console.log(id);
-        my_case.cause_number = cause_number;
-        my_case.description = description;
-        my_case.id = id;
+        let id = button.getAttribute("data-id");
 
-        sessionStorage.setItem("cause_number", cause_number);
-        sessionStorage.setItem("case_description", description);
-        sessionStorage.setItem("case_id", id);
+        let url;
+        let payload;
+
+        if (id == "")
+        {
+            url = "/clearcaseid/";
+            payload = {"_id": "none"};
+        }
+        else
+        {
+            url = "/setcaseid/";
+            payload = {"_id": id};    
+        }
+
+        // Update server-side session cookie
+        $.ajax(
+            {
+                method: "POST",
+                url: url,
+                data: payload
+            })
+            .done(function( msg ) 
+            {
+                console.log(msg);
+                if (msg.success)
+                {
+                    document.location.reload(true);
+                }
+            });
+        },
+
+    showCaseItems: function(event, rivets_binding)
+    {
+        window.location.assign("/case/items/");
     },
 
-    addVehicleToCase: function (event, rivets_binding)
+    updateCaseItems: function (event, rivets_binding)
     {
         let button = event.target;
         let db = button.getAttribute("data-db");
         let ed = button.getAttribute("data-ed");
         let rec = button.getAttribute("data-rec");
-        let case_id = rivets_binding.data.case.id;
+        let operation = button.getAttribute("data-op")
+        let category = button.getAttribute("data-category")
+        let description = button.getAttribute("data-description")
+        //let case_id = rivets_binding.data.case.id;
 
         let payload = {
             db: db,
             ed: ed,
             rec: rec,
-            case_id: case_id,
-            category: "PROPERTY:VEHICLE",
+            //case_id: case_id,
+            description: description,
+            category: category,
+            op: operation,
             key: `PUBLICDATA:${db}.${ed}.${rec}`};
         console.log(payload);
         $.ajax(
         {
             method: "POST",
-            url: "/case/add_item/",
+            url: "/case/update_items/",
             data: payload
         })
         .done(function( msg ) 
         {
             console.log(msg);
+            if (msg.success)
+            {
+                document.location.reload(true);
+            }
         });
     },
 };
@@ -185,7 +218,7 @@ app.init = function()
         // Since rivets 0.9 functions are not automatically executed in expressions. If you need backward compatibilty, set this parameter to true
         executeFunctions: false
       
-      });
+    });
 }
 
 /**
@@ -198,8 +231,8 @@ app.init = function()
 app.onReady = function()
 {
     app.init();
-    app.bind("#case_information", {data: app.data});
     app.bind("#app", {data: app.data, controller: app.controller,});
+    app.bind("#case_information", {data: app.data, controller: app.controller,});
 }
 
 /**

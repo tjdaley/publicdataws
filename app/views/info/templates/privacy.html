@@ -1,0 +1,145 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <div class="jumbotron text-center">
+        <h1 class="display-4">Privacy Matters</h1>
+        <p class="lead">
+            Assuring your privacy and maintaining your trust are more to us than collecting data about you.
+            Here's what we gather,
+            what we do with it, and how we protect it.
+        </p>
+    </div>
+
+    <h1>Data We Gather</h1>
+    <p>
+        We do not gather much data about you, your business, or your clients. Most of our work involves
+        data aggregation, data correlation, and presentation. In other words, we pull data from other sources
+        based on searches that you request, link that data to create a comprehensive view of your search
+        target, and present it in a clean, understandable manner. We do keep some data in our caches and
+        that is explained below.
+    </p>
+    <h2>Data About You</h2>
+    <p>When you sign up, we create an account record with this information in it:</p>
+    <ul>
+        <li><strong>id</strong> - A unique ID for your account. This allows us to link your account to information
+        you have chosen to save, e.g. a case record.</li>
+        <li><strong>time</strong> - The date and time that we created your account record. This helps us track
+        the rate of account creation and plan our capacity accordingly. It would also allow us to archive
+        or remove old unused accounts in the future, although that is not a practice we enage in currently.</li>
+        <li><strong>name</strong> - Your fullname, as entered by you. You can use any name you want. Some features
+        produce output that makes more sense if you use your real name, but we don't care. It's up to you.</li>
+        <li><strong>email</strong> - Your email address. At this time, we don't force you to use a valid email
+        address. This is also your username when logging in to our system. Some features, such as emailing
+        assembled documents will work for you if you share you actual email address. If you use someone
+        else's email address without their permission, we will remove your account once we learn of your
+        rotten behavior. Just don't.</li>
+        <li><strong>password</strong> - A one-way-encrypted version of your password. We can't read it. If you
+        forget it, we can't tell you what it is--you'll have to reset it. If some twit steals our database
+        (unlikely but you never know), this will provide them with ZERO ability to access your account.</li>
+        <li><strong>PublicData username</strong> - Many of our queries are against PublicData's databases. You must
+        have an active subscription with PublicData to use many of our services. We store your PublicData
+        username so that we can retrieve information from them for you using your query quotas.</li>
+        <li><strong>PublicData password</strong> - Your password for your PublicData account. This is stored in
+        the clear because we have to send it to them in the clear.</li>
+        <li><strong>Zillow key</strong> - Some of our property valuation functions include the ZEstimate of
+        the value of the property. To retrieve a ZEstimate, you'll need your own Zillow API key.</li>
+        <li><strong>flags</strong> - We keeps some flag values that tell us whether you're an administrative user
+        (you're not) or have any other enhanced or deprecated access to our system.</li>
+    </ul>
+    <h2>Data About Your Activities</h2>
+    <h3>Login History</h3>
+    <p>
+        At this time, we do not maintain a login history or even a "last logged in" timestamp.
+    </p>
+    <h3>Server Logs</h3>
+    <p>
+        Our server logs are rotated very frequently and are NOT archived. We keep some limited log data for
+        a short time to aid in technical support issues. But after 90 minutes (that window is subject to change),
+        we don't have any use for server logs and we delete them on a sliding window basis.
+    </p>
+    <h3>Query & Response Cache</h3>
+    <p>
+        We cache your queries and the responses that we get back. We do this to enhance the performance
+        of the system and to reduce your third-party costs. We do not link your identity to the cached
+        query. We maintain the cached query and result for 3-4 days. After that we consider it stale and
+        we delete it. If you or someone else makes the exact same query within that time, we'll serve
+        the cached result back to you without contacting any third-party database.
+    </p>
+    <p>
+        For example, if you search for a vehicle by VIN, say "br549", we will cache that query and the
+        result we get back for 3-4 days. If you or someone else make the exact same query for VIN
+        "br549" within the next 3-4 days, we'll return the cached query result to you or them. Our
+        cache does not connect users with cached items--no one, including us--can determine your
+        search history by reviewing our cache.
+    </p>
+    <h1>Data We Share</h1>
+    <h2>Third-Party Database Providers</h2>
+    <p>
+        When you request a search that sends us to a third-party database, such as PublicData or Zillow,
+        we share your login credentials and your query terms with the third-party database provider.
+        In other words, if you search for a vehicle by VIN, we'll forward that query to PublicData along
+        with your login credentials. They might keep a list of your queries and we don't know what they
+        do with that list. That applies to all third-party databases that we aggregate. On the other hand,
+        it's no different than if you logged in directly to that third-party system and performed
+        your search there, except that our views aggregate data meaningfully and look a lot better.
+    </p>
+    <h2>Requests from Third Parties</h2>
+    <p>
+        We do not honor subpoenas from any non-government agency. We just ignore them. If we receive
+        a subpoena from a government agency, and we have any ability and right to do so, we will
+        notify you so that you can hire an attorney and try to resist the subpoena. Our services 
+        are hosted on cloud-servers (Amazon AWS, for now) and we can't promise you that they never
+        peek or poke or honor a third-party subpoena or request for instrusion. But that's just life
+        in our modern surveillance state. We'll do all we can to protect you, but we can't promise
+        that anyone else will.
+    </p>
+    <h2>Others</h2>
+    <p>
+        Other than that, we don't share any of your data or any data about you with anyone else.
+    </p>
+    <h1>Data Protection</h1>
+    <h2>Passwords</h2>
+    <p>
+        All passwords are one-way-encrypted. We can't read your password and neither can anyone
+        else. All logins are done across encrypted HTTP connections (HTTPS), unless you foolisly
+        decide to bypass HTTPS.
+    </p>
+    <h2>Database</h2>
+    <p>
+        Our databases are hosted behind firewalls that do not pass traffic between the Internet
+        and the database. There is no way to connect to our databases from the outside. Even we can't
+        connect to our databases from the outside. So, for example, if one of us loses a laptop in an
+        airport and someone breaks into it, yes, they'll find our query tools, but they will not be
+        able to connect the query tools to the database. It's THAT secure.
+    </p>
+    <h2>Traffic</h2>
+    <p>
+        We support the most recent and strongest HTTPS encryption features. You will use them by
+        default. I suppose you could coax your browser to bypass HTTPS and use an unencrypted HTTP
+        connection, but then, that's on you. We'll assume you had your reasons. As long as you are
+        using the default HTTPS connection, all traffic between your computer and our servers is
+        encrypted and protected from snooping.
+    </p>
+    <p>
+        NOTE: The only part of an HTTPS connection that is encrypted is the payload. It is exactly
+        like a sealed enveloped deposited in the mail. Anyone can read the address, only the recipient
+        can read the content. (In this example, the envelope contains a letter written in code, so even
+        if someone intercepts and opens the envelope, the contents will make no sense.) Likewise, your
+        internet provider is probably keeping a list of web sites that you visit. So, most likely, is
+        your browser. They don't know what you're doing on our web site and they
+        can't tell what we're sending back to you other than its size.
+    </p>
+    <h1>Remember: We Live in a Surveillance State</h1>
+    <p>
+        We protect all that we can. Just remember, we live in a surveillance state. Governments think
+        it's their business and perhaps in our interest to monitor every move we make, whether in the
+        temporal world or the digital world. We don't disclose anything to them, but they gather up what
+        they can by reading traffic destinations and computer locations. Big Data companies are
+        positioned to make a fortune from whatever they can discern about you so they meticulously track
+        everything they possibley can. Again, they know where you are and they know what web sites you
+        visit. But they have no ability to see what you use our site for or what information we send back
+        to you.
+    </p>
+    <p>
+        Be smart. Be careful. Staty curious.
+    </p>
+{% endblock %}

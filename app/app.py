@@ -7,15 +7,26 @@ Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
 import argparse
 import random
-from flask import Flask, render_template, request, flash, redirect, url_for, session, logging, make_response, jsonify
+from flask import Flask, render_template, request, flash, redirect, url_for
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
-from passlib.hash import sha256_crypt
+
 from functools import wraps
 
+from views.decorators import is_admin_user, is_logged_in, is_case_set
+
 from webservice import WebService
+from util.database import Database
+
+from views.admin.admin_routes import admin_routes
+from views.cases.case_routes import case_routes
+from views.drivers.driver_routes import driver_routes
+from views.info.info_routes import info_routes
+from views.login.login import login
+from views.real_property.real_property_routes import rp_routes
+from views.vehicles.vehicle_routes import vehicle_routes
+
 WEBSERVICE = None
 
-from util.database import Database
 DATABASE = Database()
 DATABASE.connect()
 
@@ -195,9 +206,9 @@ def search_dmv():
 
     if form["owner_name"]:
         (success, message, results) = WEBSERVICE.dmv_name(
-                pd_credentials(session),
-                search_terms=form['owner_name'],
-                us_state=form['state']
+            pd_credentials(session),
+            search_terms=form['owner_name'],
+            us_state=form['state']
         )
         net_results = join_results(search_type, net_results, results)
 
@@ -743,8 +754,6 @@ def login():
         ]
         message = random.choice(messages)
         return render_template("login.html", error=message)
-
-    return render_template('login.html')
 
 
 @app.route("/logout")

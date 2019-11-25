@@ -1,0 +1,96 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Motor Vehicle Search</h1>
+
+    <form class="needs-validation mb-3 p-2 bg-light" novalidate method="post">
+        <div class="form-group form-row">
+            <div class="col-md-2">
+                <label for="broad_search">Entire record</label>
+            </div>
+            <div class="col-md-2">
+                {% include '_dmv_state.html' %}
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" id="broad_search" name="search_terms" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-md" type="submit" name="search_type" value="any"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-2"></div>
+            <div class="col">
+                <small class="text-muted text-reverse">HINT: Do not specify street disignations such as "drive" or "rd".</small>
+            </div>
+        </div>
+    </form>
+
+    <form class="needs-validation mb-3 p-2 bg-light" novalidate method="post">
+        <div class="form-group form-row">
+            <div class="col-md-2">
+                <label for="name_search">Owner name</label>
+            </div>
+            <div class="col-md-2">
+                {% include '_dmv_state.html' %}
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" id="name_search" name="search_terms" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-md" type="submit" name="search_type" value="name"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-2"></div>
+            <div class="col">
+                <small class="text-muted text-reverse">HINT: Use double pipes ("||") to separate variations, e.g. Tom Daley||Thomas Daley.</small>
+            </div>
+        </div>
+    </form>
+    
+    <form class="needs-validation mb-3 p-2 bg-light" novalidate method="post">
+        <div class="form-group form-row">
+            <div class="col-md-2">
+                <label for="plate_search">License plate</label>
+            </div>
+            <div class="col-md-2">
+                {% include '_dmv_state.html' %}
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" id="plate_search" name="search_terms" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-md" type="submit" name="search_type" value="plate"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-2"></div>
+            <div class="col">
+                <small class="text-muted text-reverse">HINT: Use an abbreviated version of the plate for a broader search.</small>
+            </div>
+        </div>
+    </form>
+
+    <form class="needs-validation mb-3 p-2 bg-light" novalidate method="post">
+        <div class="form-group form-row">
+            <div class="col-md-2">
+                <label for="vin_search">VIN</label>
+            </div>
+            <div class="col-md-2">
+                {% include '_dmv_state.html' %}
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" id="vin_search" name="search_terms" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-md" type="submit" name="search_type" value="vin"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-2"></div>
+            <div class="col">
+                <small class="text-muted text-reverse">HINT: Be sure to property differentiate between ZEROS and Ohs.</small>
+            </div>
+        </div>
+    </form>
+{% endblock %}

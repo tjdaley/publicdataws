@@ -1,0 +1,51 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Matching Vehicles</h1>
+    <ul class="list-group">
+        {% for vehicle in vehicles %}
+            <li class="list-group-item">
+                {% if vehicle.case_status == "X" or vehicle.case_status == "N" %}
+                <button
+                    type="button"
+                    data-db="{{vehicle.db}}"
+                    data-ed="{{vehicle.ed}}"
+                    data-rec="{{vehicle.rec}}"
+                    data-op="add"
+                    data-category="PROPERTY:VEHICLE"
+                    data-description="{{vehicle.year_make_model}}"
+                    rv-on-click="controller.updateCaseItems"
+                    rv-show="{% if 'case' in session %}1{% else %}0{% endif %}"
+                    class="btn btn-outline-primary btn-sm">Add</button>
+                {% endif %}
+                <a href="/vehicle/{{vehicle.db}}/{{vehicle.ed}}/{{vehicle.rec}}/{{vehicle.state}}/">{{vehicle.year_make_model}}</a>
+                {% if vehicle.case_status == "I" or vehicle.case_status == "N" %}
+                <button
+                    type="button"
+                    data-db="{{vehicle.db}}"
+                    data-ed="{{vehicle.ed}}"
+                    data-rec="{{vehicle.rec}}"
+                    data-op="del"
+                    data-category="PROPERTY:VEHICLE"
+                    data-description="{{vehicle.year_make_model}}"
+                    rv-on-click="controller.updateCaseItems"
+                    rv-show="{% if 'case' in session %}1{% else %}0{% endif %}"
+                    class="btn btn-outline-danger btn-sm float-right">X</button>
+                {% endif %}
+
+                <div><small class="text-muted">Owner: {{vehicle.owner_name}} // Plate: {{vehicle.plate}}</small></div>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}
+
+<!--
+    self.owner_name = None
+    self.year_make_model = None
+    self.plate = None
+    self.data_source = None
+    self.db = None
+    self.ed = None
+    self.rec = None
+    self.source = None
+    self.state = None
+-->

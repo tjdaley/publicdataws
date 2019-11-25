@@ -1,0 +1,42 @@
+{% extends 'layout.html' %}
+{% block body %}
+
+    <div class="row">
+        <h1>{{driver.first_name or ""}} {{driver.middle_name or ""}} {{driver.last_name or ""}} {{driver.suffix or ""}}</h1>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Address</small></div>
+            <div class="row"><a href="/search/dl_address?a={{driver.linkable_address}}&s={{driver.state}}">{{driver.address or ""}}</a></div>
+            <div class="row">{{driver.city or ""}}, {{driver.state}} {{driver.zip_code}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Birth Date</small></div>
+            <div class="row">{{driver.dob or ""}}</div>
+        </div>
+        <div class="col-md-2">
+            <div class="row"><small class="font-weight-bold">Sex</small></div>
+            <div class="row">{{driver.sex or "n/a"}}</div>
+        </div>
+        <div class="col-md-2">
+            <div class="row"><small class="font-weight-bold">Race</small></div>
+            <div class="row">{{driver.race or "n/a"}}</div>
+        </div>    
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">License #</small></div>
+            <div class="row">{{driver.license_number or "(missing)"}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Type</small></div>
+            <div class="row">{{driver.license_type or "(unknown)"}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Issue date</small></div>
+            <div class="row">{{driver.issue_date or "(missing)"}}</div>
+        </div>
+    </div>
+    
+{% endblock %}

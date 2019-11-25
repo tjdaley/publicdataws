@@ -1,0 +1,139 @@
+{% extends 'layout.html' %}
+{% block body %}
+
+    <div class="row">
+        <h1>{{prop.property_street}}</h1>
+    </div>
+    <div class="row mb-6">
+        <small class="muted">ID: {{prop.property_id or ""}} / {{prop.parcel_id}}</small>
+        {% if prop.zillow %}
+        <small>&nbsp;{{prop.zbranding|safe}}</small>
+        {% endif %}
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="row"><h3>Situs</h3></div>
+            <div class="row">
+                {{prop.property_street}}
+            </div>
+            <div class="row">
+                {{prop.property_city}}, {{prop.property_state}} {{prop.property_zip}}
+            </div>
+            <div class="row">
+                {{prop.property_county}} County
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="row"><h3>Owner</h3></div>
+            <div class="row">
+                {{prop.owner_name}}
+            </div>
+            <div class="row">
+                {{prop.owner_street}}
+            </div>
+            <div class="row">
+                {{prop.owner_city or ""}} {{prop.owner_state or ""}} {{prop.owner_zip or ""}}
+            </div>
+        </div>
+    
+        <div class="col-md-4">
+            <div class="row"><h3>Features</h3></div>
+            <div class="row">
+                Beds/Baths: {{prop.beds or ""}} / {{prop.baths}}
+            </div>
+            <div class="row">
+                Stories: {{prop.stories}}
+            </div>
+            <div class="row">Pool: {{prop.pool}}</div>
+            <div class="row">Acres: {{prop.acres}}</div>
+            <div class="row">Zoning: {{prop.zoning}}</div>
+            <div class="row">Units: {{prop.units}}</div>
+        </div>
+    </div>
+
+    <div class="row"><hr /></div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Legal Description</small></div>
+            <div class="row">{{prop.legal_description or ""}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Deed</small></div>
+            <div class="row">Type: {{prop.deed_type or ""}}</div>
+            <div class="row">Location: {{prop.deed_location or ""}}</div>
+            <div class="row">Date: {{prop.deed_date or ""}}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Hulahoop</small></div>
+            <div class="row">?what?</div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Tax Appraisal</small></div>
+            <div class="row">Year: {{prop.cad_value_year}}</div>
+            <div class="row">Market Value: {{prop.cad_market_value}}</div>
+            <div class="row">Tax Value: {{prop.cad_appraised_value}}</div>
+        </div>
+        <div class="col-md-4">
+            {% if prop.zillow %}
+            <div class="row"><small class="font-weight-bold">Zillow</small></div>
+            <div class="row">ZEstimate: {{prop.zestimate}}</div>
+            <div class="row">Comps:&nbsp;<a href="{{prop.comps_link}}">Zillow</a></div>
+            <div class="row">Latitude: {{prop.latitude}}</div>
+            <div class="row">Longitude: {{prop.longitude}}</div>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            <div class="row"><small class="font-weight-bold">Mortgage Balance (est)</small></div>
+            <div class="row">*pending*</div>
+        </div>
+    </div>    
+{% endblock %}
+
+<!--
+        self.property_street = None
+        self.property_city = None
+        self.property_state = None
+        self.property_county = county
+        self.property_zip = None
+
+        self.property_id = None
+        self.parcel_id = None
+
+        self.owner_name = None
+        self.owner_street = None
+        self.owner_city = None
+        self.owner_state = None
+        self.owner_zip = None
+
+        self.legal_description = None
+        self.deed_date = None
+        self.deed_type = None
+        self.deed_location = None
+
+        self.living_area = 0
+        self.year_built = None
+        self.beds = 0
+        self.baths = 0
+        self.stories = 0
+        self.units = 0
+        self.pool = False
+        self.acres = 0
+        self.zoning = None
+
+        self.cad_value_year = None
+        self.cad_market_value = None
+        self.cad_appraised_value = None
+
+        self.zillow = False
+        self.street = None
+        self.csz = None
+        self.latitude = None
+        self.longitude = None
+        self.zestimate = None
+        self.zbranding = None
+-->

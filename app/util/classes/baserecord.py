@@ -7,7 +7,7 @@ import json
 
 
 class BaseRecord(object):
-    
+
     MAPPINGS = []
 
     def to_dict(self)->dict:
@@ -22,14 +22,14 @@ class BaseRecord(object):
 
         return result
 
-    def to_json(self, indent:int=0)->str:
+    def to_json(self, indent: int=0)->str:
         """
         Get JSON-string representation of this instance
         """
         my_dict = self.to_dict()
         return json.dumps(my_dict)
 
-    def from_xml(self, root, source:str, state:str):
+    def from_xml(self, root, source: str, state: str):
         """
         Parses given XML tree into our standard format.
 
@@ -50,7 +50,7 @@ class BaseRecord(object):
 
         for mapping in mappings:
             path = ".//field[@label='{}']".format(mapping["label"])
-            #print("looking for", path)
+
             elem = root.findall(path)
             if elem:
                 if "prop" in mapping:
@@ -58,11 +58,10 @@ class BaseRecord(object):
                 else:
                     value = elem[0].text
 
-                #print("\tfound:", value)
                 if value:
                     # See if we need to transform the data in any way.
                     if "transform" in mapping and mapping["transform"]:
-                        value  = mapping["transform"](value)
+                        value = mapping["transform"](value)
 
                     # If the target attribute already has a value, append this value
                     # to the existing value.
@@ -71,6 +70,5 @@ class BaseRecord(object):
                         value = existing_value + " / " + value
                     setattr(self, mapping["attr"], value)
             else:
-                #print("\tnot found")
+                # print("\tnot found")
                 pass
- 

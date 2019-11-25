@@ -89,6 +89,37 @@ class WebService(object):
             }
             results.append(parcel)
 
+        # remove items that do not have an address. Some counties in some states have what
+        # appear to be blank records.
+        results = [parcel for parcel in results if parcel.property_address != ""]
+
+        return (success, "OK", results)
+
+    def zillow_data(self, parcel, zwsid: str) -> list:
+        street = parcel.property_street
+        csz = f"{parcel.property_city}, {parcel.property_state} {parcel.property_zip}"
+        (success, message, tree) = self.zillow.search(street, csz, zwsid)
+        if not success:
+            self.logger.error(f"Error retrieving ZILLOW data for {street} / {csz}: {message}")
+            parcel.zillow = False
+            return parcel
+
+        root = tree.getroot()
+        address = root.find("./response/results/result/address")
+        parcel.zillow = True
+        parcel.street = address.find("street").text
+        parcel.csz = "{}, {} {}".format(address.find("city").text, address.find("state").text, address.find("zipcode").text)
+        parcel.latitide = address.find("latitude").text
+        parcel.longitude = address.find("longitude").text
+        parcel.zestimate = float(root.find("./response/results/result/zestimate/amount").text)
+        details_link = root.find("./response/results/result/links/homedetails").text
+        comps_link = root.find("./response/results/result/links/comparables").text
+        parcel.zbranding = '<a href="{}">See more details for {} on Zillow.</a>'.format(details_link, parcel.property_street)
+        parcel.comps_link = comps_link
+        return parcel
+
+    def property_details(self, credentials: dict, db: str, ed: str, rec: str, us_state: str, get_zillow: bool, zwsid: str):
+        (success, message, result) = self.public_data.property_details(credentials, db, ed, rec, us_state)
         if get_zillow:
             results = self.zillow_data(results)
 
@@ -313,7 +344,7 @@ class WebService(object):
         else:
             useful_life = normal_useful_life
 
-        sum_of_years = sum(year for year in range(1, useful_life+1))
+        sum_of_years = sum(year for year in range(1, useful_life + 1))
 
         for amort_year in range(useful_life, 0, -1):
             depreciation = float(amort_year / sum_of_years) * original_value * - 1  # NOQA
@@ -335,7 +366,7 @@ class WebService(object):
 
 
 def print_schedule(schedule: list, message: str, details: DmvDetails):
-    print("\n", "-"*41, sep="")
+    print("\n", "-" * 41, sep="")
     print("%-41s" % "A M O R T I Z A T I O N   S C H E D U L E\n")
     print(message)
 
@@ -354,9 +385,9 @@ def print_schedule(schedule: list, message: str, details: DmvDetails):
     else:
         purch_date = "(Unknown)"
     print("VIN    : %s" % (details.vin))
-    print("Purch  : %s for $%8.2f" % (purch_date, float(details.sold_price)/100.00))  # NOQA
+    print("Purch  : %s for $%8.2f" % (purch_date, float(details.sold_price) / 100.00))  # NOQA
     print("Titled : %s" % details.owner_name)
-    print("-"*41)
+    print("-" * 41)
     if schedule:
         print("%4s  %-11s  %-11s  %-11s" % ("Year", "Begin", "Deprec.", "End"))
     for line_item in schedule:

@@ -1,0 +1,53 @@
+{% extends 'layout.html' %}
+{% block body %}
+    {% if discovery %}
+    <h1>Discovery Items</h1>
+    {% for category, items in discovery.items() if category[0:2] != '/X' %}
+        <h3>{{category[1:]}}</h3>
+        <ul class="list-group">
+        {% for subcat, item in items.items() %}
+            {% if subcat[0] != '/' %}
+            <li class="list-group-item">
+                <a href="/driver/{{item.db}}/{{item.ed}}/{{item.rec}}/{{item.state}}/">{{item.description}}</a>
+                <button
+                    type="button"
+                    data-db="{{item.db}}"
+                    data-ed="{{item.ed}}"
+                    data-rec="{{item.rec}}"
+                    data-op="del"
+                    data-category="{{category[1:]}}}}"
+                    data-description="{{item.description}}"
+                    rv-on-click="controller.updateCaseItems"
+                    rv-show="data.case.id"
+                    class="btn btn-outline-danger btn-sm float-right">X</button>
+            </li>
+            {% else %}
+                <h5>{{subcat[1:]}}</h5>
+                {% if item %}
+                    <ul class="list-group">
+                    {% for key, subitem in item.items() %}
+                        <li class="list-group-item">
+                            <a href="/driver/{{subitem.db}}/{{subitem.ed}}/{{subitem.rec}}/{{subitem.state}}/">{{subitem.description}}</a>
+                            <button
+                                type="button"
+                                data-db="{{subitem.db}}"
+                                data-ed="{{subitem.ed}}"
+                                data-rec="{{subitem.rec}}"
+                                data-op="del"
+                                data-category="{{category[1:]}}:{{subcat[1:]}}"
+                                data-description="{{subitem.description}}"
+                                rv-on-click="controller.updateCaseItems"
+                                rv-show="data.case.id"
+                                class="btn btn-outline-danger btn-sm float-right">X</button>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        </ul>
+    {% endfor %}
+    {% else %}
+    <h1>No Discovery Items Found for this Case.</h1>
+    {% endif %}
+{% endblock %}
