@@ -1,6 +1,100 @@
 'use strict';
 
 var controller = {
+    lookupAttorney: function(bar_number, callback)
+    {
+        if (bar_number.length == 0) return;
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/attorney/find/'+bar_number
+            }
+        )
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+            else
+                callback(msg);
+        });
+    },
+
+    saveDiscoveryRequestText: function(id, request_number, request_text)
+    {
+        let payload = {
+            id: id,
+            request_number: request_number,
+            request_text: request_text
+        };
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/discovery/request/save',
+                data: payload
+            }
+        )
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+        });
+    },
+
+    deleteDiscoveryRequest: function(id, request_number)
+    {
+        let payload = {
+            id: id,
+            request_number: request_number
+        };
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/discovery/request/delete',
+                data: payload
+            }
+        )
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+        });
+    },
+
+    deleteDiscoveryDocument: function(id)
+    {
+        let payload = {'id': id}
+        $.ajax({method: 'POST', url: '/discovery/document/delete', data: payload})
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+        });
+    },
+
+    setDiscoveryDocumentCleanedUp: function(id, value)
+    {
+        let payload = {
+            id: id,
+            value: value
+        };
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/discovery/document/set_cleaned_flag',
+                data: payload
+            }
+        )
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+        });
+    },
+
     setCase:function (event, rivets_binding)
     {
         let my_case = rivets_binding.data.case;
