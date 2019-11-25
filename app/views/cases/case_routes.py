@@ -34,7 +34,8 @@ case_routes = Blueprint("case_routes", __name__, template_folder="templates")
 @is_case_set
 def get_case_items():
     case_id = session['case']['_id']
-    return render_template("discovery_list.html", discovery=DATABASE.get_case_items(session['email'], case_id=case_id), case_id=case_id)
+    case_items = DATABASE.get_case_items(session['email'], case_id=case_id)
+    return render_template("case_discovery_list.html", discovery=case_items, case_id=case_id)
 
 
 @case_routes.route('/case/add/', methods=['GET', 'POST'])

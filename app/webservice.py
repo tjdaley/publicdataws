@@ -91,7 +91,7 @@ class WebService(object):
 
         # remove items that do not have an address. Some counties in some states have what
         # appear to be blank records.
-        results = [parcel for parcel in results if parcel.property_address != ""]
+        results = [parcel for parcel in results if parcel['street'] != '']
 
         return (success, "OK", results)
 

@@ -12,6 +12,7 @@ Copyright (c) 2019 by Thomas J. Daley. All Rights Reserved.
 from flask import Blueprint, flash, render_template, redirect, request, session, url_for
 import random
 from passlib.hash import sha256_crypt
+from operator import itemgetter
 
 from views.decorators import is_logged_in, is_case_set
 
@@ -54,7 +55,7 @@ def search(search_type, search_terms, search_state):
 
         # if 'case' in session:
         #    filter_results(results, session['case']['_id'], "PERSON")
-        results = sorted(results, key=lambda i: (i.case_status, i.owner_name))
+        results = sorted(results, key=itemgetter('owner'))
         return render_template('properties.html', properties=results)
 
     form = request.form

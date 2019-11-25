@@ -25,11 +25,11 @@ DATABASE.connect()
 
 
 # Helper to create Public Data credentials from session variables
-def pd_credentials(mysession)->dict:
+def pd_credentials(mysession) -> dict:
     return {"username": session["pd_username"], "password": session["pd_password"]}
 
 
-def join_results(search_type: str, prior_results: dict, new_results: list)->dict:
+def join_results(search_type: str, prior_results: dict, new_results: list) -> dict:
     """
     Join the new results with the prior results disjunctively or conjunctively.
 
@@ -89,6 +89,7 @@ def filter_results(results: list, case_id: str, category: str):
         for item in results:
             if item.key() in included:
                 item.case_status = "I"
+
 
 vehicle_routes = Blueprint("vehicle_routes", __name__, template_folder="templates")
 

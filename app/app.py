@@ -7,7 +7,7 @@ Copyright (c) 2019 by Thomas J. Daley, J.D.
 """
 import argparse
 import random
-from flask import Flask, render_template, request, flash, redirect, url_for
+from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
 
 from functools import wraps
@@ -31,6 +31,14 @@ DATABASE = Database()
 DATABASE.connect()
 
 app = Flask(__name__)
+
+app.register_blueprint(admin_routes)
+app.register_blueprint(case_routes)
+app.register_blueprint(driver_routes)
+app.register_blueprint(info_routes)
+app.register_blueprint(login)
+app.register_blueprint(rp_routes)
+app.register_blueprint(vehicle_routes)
 
 
 # Decorator to check if user is logged in
@@ -73,216 +81,6 @@ def index():
 @app.route('/about', methods=['GET'])
 def about():
     return render_template('about.html')
-
-
-def join_results(
-    search_type: str,
-    prior_results: dict,
-    new_results: list
-) -> dict:
-    """
-    Join the new results with the prior results disjunctively or conjunctively.
-
-    Args:
-        search_type (str): "disjunctive" (or the results) or "conjunctive"
-            (and the results)
-        prior_results (dict): results from prior searches. (key = db+ed+rec)
-        new_results (list): results from latest search.
-
-    Returns:
-        (dict): joined results
-    """
-    # Disjunctive search means merge all the search results into a super-set
-    # containing all results found in all searches.
-    if search_type == "disjunctive":
-        for result in new_results:
-            key = "{}-{}-{}".format(result.db, result.ed, result.rec)
-            prior_results[key] = result
-        return prior_results
-
-    # Conjunctive search means the end result must be just those results
-    # that were in each sub search.
-
-    # First, convert the array to a dictionary
-    new_results_dict = {}
-    for result in new_results:
-        key = "{}-{}-{}".format(result.db, result.ed, result.rec)
-        new_results_dict[key] = result
-
-    # Now find the keys in common
-    if prior_results:
-        merged_result = {
-            key: prior_results[key] for key in prior_results.keys()
-            & new_results_dict.keys()
-        }
-    else:
-        merged_result = new_results_dict
-    return merged_result
-
-
-def search_drivers(search_type, search_terms, search_state):
-    (success, message, results) = WEBSERVICE.drivers_license(
-        pd_credentials(session),
-        search_terms=search_terms,
-        search_scope=search_type,
-        us_state=search_state)
-
-    if success:
-        if not results:
-            message = """
-            No drivers found that match ALL the search criteria. This can be
-            for two reasons:
-            (1) There really aren't any driverss that match the combined
-                search criteria; or
-            (2) The search criteria were too broad which resulted in the
-                search results to be truncated thus reducing the number of
-                drivers that matched all criteria. If you used a criterion in
-                the "entire record" field that would return more than 1000
-                results, the second explanation probably applies.
-            """
-            flash(message, "warning")
-            return redirect(url_for('search_dl'))
-
-        flash("Found {} matching drivers.".format(len(results)), "success")
-        return render_template('drivers.html', drivers=results)
-
-    form = request.query()
-    return render_template(
-        "search_error.html",
-        formvariables=form,
-        operation="Search: DL",
-        message=message
-    )
-
-
-@app.route('/search/dl_address', methods=['GET'])
-@is_logged_in
-def search_dl_address():
-    search_type = "main"
-    search_terms = request.args.get('a')
-    search_state = request.args.get('s').lower()
-    return search_drivers(search_type, search_terms, search_state)
-
-
-@app.route('/search/dl', methods=['GET', 'POST'])
-@is_logged_in
-def search_dl():
-    if request.method == 'GET':
-        return render_template('search_dl.html')
-
-    form = request.form
-    search_type = form["search_type"]
-    search_terms = form["search_terms"]
-    search_state = form["state"]
-    return search_drivers(search_type, search_terms, search_state)
-
-
-@app.route('/driver/<string:db>/<string:ed>/<string:rec>/<string:state>/', methods=['GET'])  # NOQA
-@is_logged_in
-def driver_details(db, ed, rec, state):
-    (success, message, result) = \
-        WEBSERVICE.driver_details(pd_credentials(session), db, ed, rec, state)
-    if success:
-        return render_template('driver.html', driver=result)
-    return render_template(
-        "search_error.html",
-        formvariables=[],
-        operation="Search: DL Details",
-        message=message
-    )
-
-
-@app.route('/search/dmv', methods=['GET', 'POST'])
-@is_logged_in
-def search_dmv():
-    if request.method == 'GET':
-        return render_template('search_dmv.html')
-
-    # Process each field specified by the user, either conjuncitively or
-    # disjunctively.
-    form = request.form
-    search_type = form["search_type"]
-    net_results = {}
-
-    if form["owner_name"]:
-        (success, message, results) = WEBSERVICE.dmv_name(
-            pd_credentials(session),
-            search_terms=form['owner_name'],
-            us_state=form['state']
-        )
-        net_results = join_results(search_type, net_results, results)
-
-    if form["plate"]:
-        (success, message, results) = WEBSERVICE.dmv_plate(
-            pd_credentials(session),
-            search_terms=form['plate'],
-            us_state=form['state']
-        )
-        net_results = join_results(search_type, net_results, results)
-
-    if form["vin"]:
-        (success, message, results) = WEBSERVICE.dmv_vin(
-            pd_credentials(session),
-            search_terms=form['vin'],
-            us_state=form['state']
-        )
-        net_results = join_results(search_type, net_results, results)
-
-    if form["search"]:
-        (success, message, results) = WEBSERVICE.dmv_any(
-            pd_credentials(session),
-            search_terms=form['search'],
-            us_state=form['state']
-        )
-        net_results = join_results(search_type, net_results, results)
-
-    if success:
-        results = [net_results[key] for key in net_results.keys()]
-
-        if not results:
-            message = """
-            No vehicles found that match ALL the search criteria. This can be
-            for two reasons:
-            (1) There really aren't any vehicles that match the combined
-                search criteria; or
-            (2) The search criteria were too broad which resulted in the
-                search results to be truncated thus reducing the number of
-                vehicles that matched all criteria. If you used a criterion in
-                the "entire record" field that would return more than 1000
-                results, the second explanation probably applies.
-            """
-            flash(message, "warning")
-            return redirect(url_for('search_dmv'))
-
-        flash("Found {} matching vehicles.".format(len(results)), "success")
-        return render_template('vehicles.html', vehicles=results)
-    return render_template(
-        "search_error.html",
-        formvariables=form,
-        operation="Search: DMV",
-        message=message
-    )
-
-
-@app.route('/vehicle/<string:db>/<string:ed>/<string:rec>/<string:state>/', methods=['GET'])  # NOQA
-@is_logged_in
-def vehicle_details(db, ed, rec, state):
-    (success, message, result) = \
-        WEBSERVICE.dmv_details(pd_credentials(session), db, ed, rec, state)
-    if success:
-        return render_template('vehicle.html', vehicle=result)
-    return render_template(
-        "search_error.html",
-        formvariables=[],
-        operation="Search: DMV Details",
-        message=message
-    )
-
-
-@app.route('/search/rp', methods=['GET'])
-@is_logged_in
-def search_rp_get():
-    return render_template('search_rp.html')
 
 
 @app.route('/discovery/list/<string:scope>')
