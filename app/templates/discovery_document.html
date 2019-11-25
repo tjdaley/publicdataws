@@ -1,0 +1,78 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Discovery Document</h1>
+    {% from 'includes/_formhelpers.html' import render_field %}
+    <form method='POST'>
+        {% if document._id %}
+        <input type="hidden" name="_id" id="_id" value="{{document._id}}">
+        {% endif %}
+        <div class='row'>
+            <div class='col-md-6'>
+                <div class='form-group'>
+                    {{render_field(form.cause_number, class_='form-control', value=document.cause_number)}}
+                </div>
+                <div class='form-group'>
+                    {{render_field(form.county, class_='form-control', value=document.county)}}
+                </div>
+                <div class='form-group'>
+                    {{render_field(form.court_type, class_='form-control', value=document.court_type)}}
+                </div>
+                <div class='form-group'>
+                    {{render_field(form.court_number, class_='form-control', value=document.court_number)}}
+                </div>
+                <div class='form-group'>
+                    {{render_field(form.discovery_type, class_='form-control', value=document.discovery_type)}}
+                </div>
+            </div>
+            <div class='col-md-6'>
+                <div class='form-group'>
+                    {{render_field(form.requesting_bar_num, id="bar_number", class_='form-control bar_number', value=document.requesting_attorney.bar_number)}}
+                </div>
+                <div class='form-group'>
+                    {{render_field(form.requesting_email, class_='form-control', value=document.requesting_attorney.email)}}
+                </div>
+                <div class='form-group'>
+                        {{render_field(form.requesting_name, class_='form-control', disabled='disabled', id='atty_name', value='')}}
+                </div>
+                <div class='form-group'>
+                    {{render_field(form.requesting_license_date, class_='form-control', disabled='disabled', id='atty_license_date', value='')}}
+                </div>
+                <div class='form-group'>
+                        {{render_field(form.requesting_primary_addr, class_='form-control', disabled='disabled', id='atty_city', value='')}}
+                </div>
+                <div class='form-group'>
+                        {{render_field(form.requesting_address, class_='form-control', disabled='disabled', id='atty_address', value='')}}
+                </div>
+            </div>
+        </div>
+            
+        <p><input type='submit' class='btn btn-primary' value='Submit'></p>
+    </form>
+
+    <script>
+        function show_attorney(attorney)
+        {
+            document.getElementById('atty_name').value = attorney.name;
+            document.getElementById('atty_license_date').value = attorney.license_date;
+            document.getElementById('atty_city').value = attorney.primary_practice;
+            document.getElementById('atty_address').value = attorney.address;
+        }
+
+        function lookupAttorney()
+        {
+            elem = document.getElementById('bar_number');
+            bar_number = elem.value;
+            controller.lookupAttorney(bar_number, show_attorney);
+        }
+
+        document.addEventListener('DOMContentLoaded', function()
+        {
+            elem = document.getElementById('bar_number');
+            elem.addEventListener('blur', (event) =>
+            {
+                lookupAttorney();
+            });
+            controller.lookupAttorney("{{document.requesting_attorney.bar_number}}", show_attorney);
+        });
+    </script>
+{% endblock %}

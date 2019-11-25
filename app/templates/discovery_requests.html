@@ -1,0 +1,153 @@
+{% extends 'layout.html' %}
+{% block body %}
+    {% if not doc %}
+    <h1>Document Missing</h1>
+    <p>The document you are requesting either never existed or has gone missing.</p>
+    {% else %}
+    <h1><a href="/discovery/add/"><i class="fas fa-plus-circle fa-1x"></i></a>{{doc.discovery_type}}</h1>
+    <h3>{{doc.county}} COUNTY #{{doc.cause_number}}</h3>
+    <div class="row">
+        <div class="col-md-12">
+            <input
+                type="checkbox" 
+                {% if doc.cleaned_up == 1 %} checked {% endif %}
+                data-toggle="toggle"
+                id="cleaned_button"
+                data-on="<i class='far fa-check-circle'></i> Cleaned Up"
+                data-off="<i class='far fa-question-circle'></i> Needs to be Cleaned Up"
+                data-onstyle="success"
+                data-offstyle="warning"
+                data-size="mini"
+                data-width="225"
+                data-height="35"
+            > {{doc.cleaned_up}}
+        </div>
+    </div>
+    <input type="hidden" id="_id" value="{{doc._id}}" />
+    <ul class="list-group">
+        {% for request in doc.requests %}
+            <li class="list-group-item" id="row_{{request.number}}">
+                <div class="row">
+                    <div class="col-md-1">
+                        <div class="row">
+                            <a href="/discovery/request/{{id}}//{{request.number}}">
+                                {{request.number}}
+                            </a>
+                        </div>
+                        <div class="row">
+                            <button
+                                type="button"
+                                style="display:none"
+                                id="save_{{request.number}}"
+                                class="btn btn-success btn-sm save_button">Save
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-5 editable" contenteditable="true" id="request_{{request.number}}">
+                        {{request.request}}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row justify-content-end">
+                            <button
+                                type="button"
+                                id="del_{{request.number}}"
+                                class="btn btn-danger btn-sm delete_button">X
+                            </button>
+                        </div>
+                        <div class="row">
+                            [[response goes here]]
+                        </div>
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+    
+    <script>
+        function hide_save_buttons()
+        {
+            let buttons = document.getElementsByClassName('save_button');
+            for (let button of buttons)
+            {
+                button.style.display = 'none';
+            }
+        }
+
+        function add_save_listeners()
+        {
+            let editables = document.getElementsByClassName('editable');
+            for (let element of editables)
+            {
+                element.addEventListener('click', function(event)
+                {
+                    let target_name = event.target.id;
+                    let target_number = target_name.split('_')[1];
+                    let save_id = 'save_' + target_number;
+                    let save_element = document.getElementById(save_id);
+                    hide_save_buttons();
+                    save_element.style.display = "inline";
+                });
+            }
+
+            let save_buttons = document.getElementsByClassName('save_button');
+            for (let button of save_buttons)
+            {
+                button.addEventListener('click', function(event)
+                {
+                    let target_name = event.target.id;
+                    let target_number = target_name.split('_')[1];
+                    let text_id = 'request_' + target_number;
+                    let text_element = document.getElementById(text_id);
+                    let text = text_element.innerText;
+                    let db_id = document.getElementById('_id').value;
+                    controller.saveDiscoveryRequestText(db_id, target_number, text);
+                    event.target.style.display = "none";
+                });
+            }
+        }
+
+        function add_delete_listeners()
+        {
+            let del_buttons = document.getElementsByClassName('delete_button');
+            for (let button of del_buttons)
+            {
+                button.addEventListener('click', function(event)
+                {
+                    let target_name = event.target.id;
+                    let target_number = target_name.split('_')[1];
+                    let text_id = 'request_' + target_number;
+                    let db_id = document.getElementById('_id').value;
+                    controller.deleteDiscoveryRequest(db_id, target_number);
+                    let row = document.getElementById('row_'+target_number);
+                    row.style.display = "none";
+                });
+            }
+        }
+
+        function add_toggle_listeners()
+        {
+            console.log("Initializing toggle buttons.");
+            $("#cleaned_button").change(function()
+            {
+                let value = $(this).prop('checked') ? 1 : 0;
+                console.log("Cleaned up? " + value);
+                let db_id = document.getElementById('_id').value;
+                controller.setDiscoveryDocumentCleanedUp(db_id, value);
+            });
+        }
+
+        function discovery_requests_init()
+        {
+            document.addEventListener('DOMContentLoaded', function()
+            {
+                add_save_listeners();
+                add_delete_listeners();
+                add_toggle_listeners();
+            });
+        }
+
+        discovery_requests_init();
+    </script>
+    {% endif %}
+        
+{% endblock %}

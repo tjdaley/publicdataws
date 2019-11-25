@@ -1,11 +1,10 @@
 """
 database.py - Class for access our persistent data store for publicdataws.
 
-Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
+@author Thomas J. Daley, J.D.
+@version 0.0.2
+@Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 """
-__author__ = "Thomas J. Daley, J.D."
-__version__ = "0.0.1"
-
 from datetime import datetime, timedelta
 import json
 import pickle
@@ -13,16 +12,20 @@ import xml.etree.ElementTree as ET
 import xml.dom.minidom as MD
 import time
 
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 from bson.objectid import ObjectId
 
 from .logger import Logger
+from .texasbarsearch import TexasBarSearch
 
-DB_URL = "mongodb://ec2-54-235-51-13.compute-1.amazonaws.com:27017/"
-DB_NAME = "discoverybot"
-CACHE_TABLE_NAME = "search_cache"
-USER_TABLE = "discoverybot_users"
-CASE_TABLE = "cases"
+BARSEARCH = TexasBarSearch()
+
+DB_URL = 'mongodb://ec2-54-235-51-13.compute-1.amazonaws.com:27017/'
+DB_NAME = 'discoverybot'
+CACHE_TABLE_NAME = 'search_cache'
+USER_TABLE = 'discoverybot_users'
+CASE_TABLE = 'cases'
+DISCOVERY_TABLE = 'discovery_requests'
 
 class MissingFieldException(Exception):
     def __init__self(self, message:str):
@@ -252,6 +255,17 @@ class Database(object):
             return user_doc["_id"]
         return None
 
+    def attorney(self, bar_number: str) -> dict:
+        """
+        Search for an attorney by bar number.
+        
+        Args:
+            bar_number (str): The attorney's Texas Bar number.
+        Returns:
+            (dict): Descriptive data about the attorney
+        """
+        return BARSEARCH.find(bar_number)
+
     def add_case(self, fields:dict)->bool:
         """
         Add a case to the database.
@@ -458,6 +472,260 @@ class Database(object):
         # Locate and update the matching record
         mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set":new_vals}, upsert=False)
         return mongo_result.modified_count == 1
+
+    def get_discovery_list(self, fields: dict) -> list:
+        """
+        Get a list of written discovery documents.
+        """
+        # Check for missing fields
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'scope' not in fields:
+            raise MissingFieldException("'scope' of 'all' or 'cause_number' must be provided in fields list")
+        if fields['scope'] not in ['all', 'cause_number']:
+            raise ValueError('scope must be "all" or "cause_number", not "{}"'.format(fields['scope']))
+        if fields['scope'] == 'cause_number' and 'cause_number' not in fields:
+            raise MissingFieldException("'cause_number' must be provided in fields list.")
+
+        # Lookup the user to get the user's ID
+        my_email = fields["email"].lower()
+        user_id = self.get_user_id_for_email(my_email)
+        if not user_id:
+            self.logger.error("database.get_cases(): Email not found: '%s'", my_email)
+            return {}
+
+        # Create a filter based on our scope
+        if fields['scope'] == 'all':
+            match = {
+                '$match': {
+                    'owner': fields['email'].lower()
+                }
+            }
+        else:
+            match = {
+                '$match': {
+                'owner': fields['email'].lower(),
+                'cause_number': fields['cause_number'],
+                }
+            }
+        lookup = {'$lookup': {
+            'from': CASE_TABLE,
+            'localField': 'cause_number',
+            'foreignField': 'cause_number',
+            'as': 'case'
+            }
+        }
+        documents = self.dbconn[DISCOVERY_TABLE].aggregate([match, lookup])
+        #for document in documents:
+        #    self.logger.debug("DOCS: %s", document)
+        return documents
+
+    def get_discovery_requests(self, fields: dict) -> list:
+        """
+        Get a list of written discovery requests from one document
+        """
+        # Check for missing fields
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list")
+
+        # Lookup the user to get the user's ID
+        my_email = fields["email"].lower()
+        user_id = self.get_user_id_for_email(my_email)
+        if not user_id:
+            self.logger.error("database.get_cases(): Email not found: '%s'", my_email)
+            return {}
+
+        # Create a filter
+        filter = {
+            '_id': ObjectId(fields['id']),
+            'owner': fields['email'].lower(),
+        }
+
+        # Locate matching records
+        document = self.dbconn[DISCOVERY_TABLE].find(filter)
+        if document.count() > 0:
+            return document[0]
+        return None
+
+    def get_discovery_document(self, fields: dict) -> dict:
+        """
+        Get a discovery docuemnt by document _id.
+        """
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list")
+
+        filter = {
+            '_id': ObjectId(fields['id']),
+            'owner': fields['email'],
+        }
+
+        doc = self.dbconn[DISCOVERY_TABLE].find_one(filter)
+        return doc
+
+    def save_discovery_document(self, fields: dict) -> bool:
+        """
+        Save a discovery document.
+        """
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+
+        attorney = self.attorney(fields['requesting_bar_num'])
+
+        self.logger.debug(fields)
+        self.logger.debug(attorney)
+
+        if '_id' in fields:
+            # Update
+            filter = {
+                '_id': ObjectId(fields['_id']),
+                'owner': fields['email']
+            }
+
+            update = {
+                '$set': {
+                    'court_type': fields['court_type'],
+                    'court_number': fields['court_number'],
+                    'county': fields['county'],
+                    'cause_number': fields['cause_number'],
+                    'discovery_type': fields['discovery_type'],
+                    'owner': fields['email'],
+                    'requesting_attorney.bar_number': fields['requesting_bar_num'],
+                    'requesting_attorney.email': fields['requesting_email'],
+                    'requesting_attorney.details': attorney,
+                }
+            }
+
+            mongo_result = self.dbconn[DISCOVERY_TABLE].update_one(
+                filter,
+                update,
+                upsert=False
+            )
+            return mongo_result.modified_count == 1
+
+        # Insert
+        requesting_attorney = {
+            'bar_number': fields['requesting_bar_num'],
+            'email': fields['requesting_email'],
+            'details': attorney,
+        }
+        doc = {
+            "time": time.time(),
+            "time_str": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            'court_type': fields['court_type'],
+            'court_number': fields['court_number'],
+            'county': fields['county'],
+            'cause_number': fields['cause_number'],
+            'discovery_type': fields['discovery_type'],
+            'owner': fields['email'],
+            'requesting_attorney': requesting_attorney,
+            'cleaned_up': 0,
+        }
+
+        mongo_result = self.dbconn[DISCOVERY_TABLE].insert_one(doc)
+        return mongo_result.inserted_id is not None
+
+    def update_discovery_document_field(self, fields: dict) -> bool:
+        """
+        Update one field in a discovery document.
+        """
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list")
+        if 'key' not in fields:
+            raise MissingFieldException("'key' must be provided in fields list.")
+        if 'value' not in fields:
+            raise MissingFieldException("'value' must be provided in fields list")
+
+        filter = {
+            '_id': ObjectId(fields['id']),
+            'owner': fields['email'],
+        }
+
+        update = {
+            '$set': {fields['key']: fields['value']}
+        }
+
+        self.dbconn[DISCOVERY_TABLE].update(filter, update)
+        return True
+
+    def del_discovery_document(self, fields: dict) -> bool:
+        """
+        Delete a single discovery document.
+        """
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list")
+
+        filter = {
+            '_id': ObjectId(fields['id']),
+            'owner': fields['email'],
+        }
+
+        mongo_result = self.dbconn[DISCOVERY_TABLE].delete_one(filter)
+        return mongo_result.deleted_count == 1
+
+    def save_discovery_request(self, fields: dict) -> bool:
+        """
+        Save an individual discovery request's text.
+        """
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list")
+        if 'request_number' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'request_text' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list")
+
+        filter = {
+            '_id': ObjectId(fields['id']),
+            'owner': fields['email'],
+            'requests.number': int(fields['request_number'])
+        }
+
+        update = {
+            '$set': {'requests.$.request': fields['request_text']}
+        }
+
+        self.dbconn[DISCOVERY_TABLE].update(filter, update)
+        return True
+    
+    def del_discovery_request(self, fields: dict) -> bool:
+        """
+        Delete an individual dicovery request from a document.
+        """
+        if 'email' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list")
+        if 'request_number' not in fields:
+            raise MissingFieldException("'email' must be provided in fields list.")
+
+        filter = {
+            '_id': ObjectId(fields['id']),
+            'owner': fields['email']
+        }
+
+        update = {
+            '$pull': {
+                "requests": {
+                    "number": int(fields["request_number"])
+                }
+            }
+        }
+
+        doc = self.dbconn[DISCOVERY_TABLE].find_one_and_update(
+            filter=filter,
+            update=update,
+            return_document=ReturnDocument.AFTER,
+        )
+        return True
 
     def add_user(self, fields:dict)->bool:
         """

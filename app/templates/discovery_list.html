@@ -1,0 +1,70 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1><a href="/discovery/document/add"><i class="fas fa-plus-circle fa-1x"></i></a>Discovery Requests</h1>
+    <ul class="list-group">
+        {% for doc in docs %}
+            <li class="list-group-item  {% if doc.cleaned_up != 1 %}bg-warning{% endif %}" id="{{doc._id}}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="/discovery/document/edit/{{doc._id}}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        {{doc.time_str}}
+                    </div>
+                    {% if scope=="all" %}
+                    <div class='col-md-2'>
+                        {{doc.cause_number}}
+                    </div>
+                    {% endif %}
+                    <div class="col-md-4">
+                        {% if doc.case %}
+                        {{doc.case[0].description}}
+                        {% else %}
+                        Case not found.
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2">
+                        <a href="/discovery/requests/{{doc._id}}">
+                            {{doc.discovery_type}}
+                        </a>
+                    </div>
+                    <div class="col-md-1">
+                        <button
+                            type="button"
+                            id="del_{{doc._id}}"
+                            class="btn btn-danger btn-sm delete_button">X
+                        </button>
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+    <script>
+        function add_delete_listeners()
+        {
+            let del_buttons = document.getElementsByClassName('delete_button');
+            for (let button of del_buttons)
+            {
+                button.addEventListener('click', function(event)
+                {
+                    let target_name = event.target.id;
+                    let db_id = target_name.split('_')[1];
+                    controller.deleteDiscoveryDocument(db_id);
+                    let row = document.getElementById(db_id);
+                    row.style.display = "none";
+                });
+            }
+        }
+
+        function discovery_requests_init()
+        {
+            document.addEventListener('DOMContentLoaded', function()
+            {
+                add_delete_listeners();
+            });
+        }
+
+        discovery_requests_init();
+    </script>
+    
+{% endblock %}

@@ -17,8 +17,15 @@
                     <div class="col-md-3">
                         <a href="case/{{case._id}}" class="align-middle">{{case.cause_number}}</a>
                     </div>
-                    <div class="col-md-7">
+                    <div class="col-md-5">
                         <span class="align-middle">{{case.description}}</span>
+                    </div>
+                    <div class="col-md-2">
+                        <a
+                            type="button"
+                            href="discovery/list/cause_number/{{case.cause_number}}"
+                            class="btn btn-outline-primary btn-sm">Disc
+                        </a>
                     </div>
                 </div>
             </li>
