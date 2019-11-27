@@ -6,9 +6,11 @@ This module provides the views for the following routes:
 
 /search/rp
 
+@author: Thomas J. Daley, Esq.
+@version: 0.0.1
+
 Copyright (c) 2019 by Thomas J. Daley. All Rights Reserved.
 """
-
 from flask import Blueprint, flash, render_template, redirect, request, session, url_for
 import random
 from passlib.hash import sha256_crypt
@@ -25,7 +27,7 @@ WEBSERVICE = WebService(None)
 
 
 # Helper to create Public Data credentials from session variables
-def pd_credentials(mysession)->dict:
+def pd_credentials(mysession) -> dict:
     return {
         "username": session["pd_username"],
         "password": session["pd_password"]
@@ -60,6 +62,7 @@ def search(search_type, search_terms, search_state):
 
     form = request.form
     return render_template("search_error.html", formvariables=form, operation="Search: RP", message=message)
+
 
 rp_routes = Blueprint("rp_routes", __name__, template_folder="templates")
 

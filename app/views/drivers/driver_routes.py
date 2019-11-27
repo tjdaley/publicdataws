@@ -21,7 +21,7 @@ WEBSERVICE = WebService(None)
 
 
 # Helper to create Public Data credentials from session variables
-def pd_credentials(mysession)->dict:
+def pd_credentials(mysession) -> dict:
     return {"username": session["pd_username"], "password": session["pd_password"]}
 
 
@@ -53,6 +53,7 @@ def search_drivers(search_type, search_terms, search_state):
 
     form = request.form
     return render_template("search_error.html", formvariables=form, operation="Search: DL", message=message)
+
 
 driver_routes = Blueprint("driver_routes", __name__, template_folder="templates")
 
