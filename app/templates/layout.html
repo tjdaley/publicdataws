@@ -9,14 +9,22 @@
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
         <link rel="stylesheet" href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css">
         <link rel="stylesheet" href="/static/fix_bootstrap_toggle.css">
+        <link rel="stylesheet" href="/static/sticky_footer.css">
     </head>
     <body>
-        {% include 'includes/_navbar.html' %}
-        {% include 'includes/_caseinformation.html' %}
-        <div class="container" id="app">
-            {% include 'includes/_messages.html' %}
-            {% block body %}{% endblock %}
-        </div>
+        <header>
+            {% include 'includes/_navbar.html' %}
+            {% include 'includes/_caseinformation.html' %}
+        </header>
+        <main role="main" class="container" id="app">
+            <div class="container" id="app">
+                {% include 'includes/_messages.html' %}
+                {% block body %}{% endblock %}
+            </div>
+        </main>
+        <footer class="footer">
+            {% include 'includes/_footer.html' %}
+        </footer>
         <script src="https://code.jquery.com/jquery-3.4.1.min.js"
                 integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
                 crossorigin="anonymous"></script>
@@ -32,6 +40,5 @@
         <script>
             $(window).ready(app.onReady);
         </script>
-        {% include 'includes/_footer.html' %}
     </body>
 </html>
