@@ -14,6 +14,7 @@ Copyright (c) 2019 by Thomas J. Daley, J.D. All Rights Reserved.
 from datetime import datetime, timedelta
 import json
 import os
+from operator import itemgetter
 import pickle
 import xml.etree.ElementTree as ET
 import xml.dom.minidom as MD
@@ -774,20 +775,34 @@ class Database(object):
             raise MissingFieldException("'email' must be provided in fields list.")
         if 'id' not in fields:
             raise MissingFieldException("'id' must be provided in fields list")
-        if 'request_number' not in fields:
-            raise MissingFieldException("'email' must be provided in fields list.")
         if 'request_text' not in fields:
-            raise MissingFieldException("'id' must be provided in fields list")
+            raise MissingFieldException("'request_text' must be provided in fields list")
 
         filter = {
             '_id': ObjectId(fields['id']),
             'owner': fields['email'],
-            'requests.number': int(fields['request_number'])
         }
+        # Here to update an existing request
+        if 'request_number' in fields:
+            # _id = Unique ID of the discovery document that contains the request.
+            # owner = Email address of user who owns the discovery document.
+            # requests.number = Index into requests[] contained in discovery document
+            filter['requests.number'] = int(fields['request_number'])
 
-        update = {
-            '$set': {'requests.$.request': fields['request_text']}
-        }
+            update = {
+                '$set': {'requests.$.request': fields['request_text']}
+            }
+            # Here to add a new discovery request this document.
+        else:
+            doc = self.get_discovery_document(fields)
+            request_number = next_available_request_number(doc['requests'])
+            request = {
+                'number': request_number,
+                'request': fields['request_text']
+            }
+            update = {
+                '$push': {'requests': request}
+            }
 
         self.dbconn[DISCOVERY_TABLE].update(filter, update)
         return True
@@ -1004,3 +1019,18 @@ def split_category(category: str):
         sub_cat = '/' + sub_cat
 
     return (main_cat, sub_cat)
+
+
+def next_available_request_number(requests: list) -> int:
+    """
+    Return the next available request number, which for us will be
+    the highest number + 1.
+
+    Args:
+        requests (list): Existing discovery requests in a document.
+    Returns:
+        (int): The next available request number.
+    """
+    sorted_list = sorted(requests, key=itemgetter('number'))
+    last_request = sorted_list[-1]
+    return last_request['number'] + 1
