@@ -1,4 +1,10 @@
+"""
+AddCaseForm.py - Form to Add a Case for the Logged in User.
+
+Copyright (c) 2019 by Thomas J. Daley. All Rights Reserved.
+"""
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
+
 
 class AddCaseForm(Form):
     cause_number = StringField("Cause number", [validators.DataRequired(), validators.Length(min=1, max=50)])
@@ -8,4 +14,3 @@ class AddCaseForm(Form):
     case_type = StringField("Case type", [validators.Length(min=0, max=50)])
     created_by = StringField("Created by")
     time_str = StringField("Create date")
-
