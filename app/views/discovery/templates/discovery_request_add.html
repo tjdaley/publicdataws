@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Add Discovery Request</h1>
+    {% from 'includes/_formhelpers.html' import render_field %}
+    <form method='POST'>
+        <input type="hidden" name="id" id="id" value="{{case_id}}">
+        <div class='form-group'>
+            {{render_field(form.request, class_='form-control')}}
+        </div>
+        <p><input type='submit' class='btn btn-primary' value='Submit'></p>
+    </form>
+{% endblock %}
