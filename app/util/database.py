@@ -45,6 +45,7 @@ CACHE_TABLE_NAME = 'search_cache'
 USER_TABLE = 'discoverybot_users'
 CASE_TABLE = 'cases'
 DISCOVERY_TABLE = 'discovery_requests'
+OBJECTIONS_TABLE = 'objection_templates'
 
 
 class MissingFieldException(Exception):
@@ -672,9 +673,6 @@ class Database(object):
 
         attorney = self.attorney(fields['requesting_bar_num'])
 
-        self.logger.debug(fields)
-        self.logger.debug(attorney)
-
         if '_id' in fields:
             # Update
             filter = {
@@ -790,7 +788,10 @@ class Database(object):
             filter['requests.number'] = int(fields['request_number'])
 
             update = {
-                '$set': {'requests.$.request': fields['request_text']}
+                '$set': {
+                    'requests.$.request': fields['request_text'],
+                    'requests.$.response': fields['response_text']
+                }
             }
             # Here to add a new discovery request this document.
         else:
@@ -798,7 +799,8 @@ class Database(object):
             request_number = next_available_request_number(doc['requests'])
             request = {
                 'number': request_number,
-                'request': fields['request_text']
+                'request': fields['request_text'],
+                'response': 'Response needed.'
             }
             update = {
                 '$push': {'requests': request}
@@ -905,6 +907,121 @@ class Database(object):
 
         return discovery[main_cat]
 
+    def get_objection_list(self, fields: dict) -> list:
+        """
+        Retrieve a list of possible objections for the indicated
+        type of discovery, e.g. Production, Interrogatories, etc.
+
+        Args:
+            scope (str): Type of discovery or 'all'
+        Returns:
+            (list): List of possible discovery objections
+        """
+        # Check for missing fields
+        if 'scope' not in fields:
+            raise MissingFieldException("'scope' must be provided in fields list.")
+        scope = fields['scope']
+        filter = {}
+        if scope != 'all':
+            filter = {
+                'applies_to': scope
+            }
+        projection = {
+            '_id': 1,
+            'label': 1,
+            'short_text': 1,
+            'applies_to': 1,
+        }
+        docs = self.dbconn[OBJECTIONS_TABLE].find(filter, projection)
+        return docs
+
+    def get_objection_template(self, fields: dict) -> dict:
+        """
+        Retrieve the specified objection template document.
+
+        Args:
+            objection_id (str): ID of document to be retrieved.
+        Returns:
+            (dict): PyMongo document or None
+        """
+        # Check for missing fields
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list.")
+        objection_id = fields['id']
+
+        filter_ = {'_id': ObjectId(objection_id)}
+        doc = self.dbconn[OBJECTIONS_TABLE].find_one(filter_)
+        return doc
+
+    def get_objection_text(self, objection_label: str) -> str:
+        """
+        Retrieve the full text template for a given objection.
+
+        Args:
+            objection_label (str): Index into objection_patterns collection.
+        Returns:
+            (str): Full text of objection template or None
+        """
+        filter = {'label': objection_label}
+        doc = self.dbconn[OBJECTIONS_TABLE].find_one(filter)
+        if doc:
+            return doc['template']
+        return None
+
+    def save_objection_template(self, fields: dict) -> bool:
+        """
+        Save an objection template to the database.
+        """
+        if isinstance(fields['applies_to'], list):
+            applies_to = fields['applies_to']
+        else:
+            applies_to = [fields['applies_to']]
+
+        if '_id' in fields:
+            # Update
+            filter_ = {
+                '_id': ObjectId(fields['_id']),
+            }
+
+            update = {
+                '$set': {
+                    'label': fields['label'],
+                    'short_text': fields['short_text'],
+                    'applies_to': applies_to,
+                    'template': fields['template'],
+                    'updated_by': fields['email'],
+                }
+            }
+
+            mongo_result = self.dbconn[OBJECTIONS_TABLE].update_one(
+                filter_,
+                update,
+                upsert=False
+            )
+
+            return mongo_result.modified_count == 1
+
+        # Insert
+        doc = {
+            'label': fields['label'],
+            'short_text': fields['short_text'],
+            'applies_to': applies_to,
+            'template': fields['template'],
+            'created_by': fields['email'],
+        }
+
+        mongo_result = self.dbconn[OBJECTIONS_TABLE].insert_one(doc)
+        return mongo_result.inserted_id is not None
+
+    def del_objection_template(self, fields: dict) -> bool:
+        """
+        Delete the given objection template.
+        """
+        filter_ = {'_id': ObjectId(fields['id'])}
+        self.logger.debug("Delete Objection Filter: %s", filter_)
+        mongo_result = self.dbconn[OBJECTIONS_TABLE].delete_one(filter_)
+        return mongo_result.deleted_count == 1
+
     def add_user(self, fields: dict) -> bool:
         """
         """
@@ -912,8 +1029,8 @@ class Database(object):
             fields["email"] = fields["email"].lower()
 
         record = record_from_dict(fields)
-        filter = {"email": fields["email"]}
-        document = self.dbconn[USER_TABLE].find_one(filter)
+        filter_ = {"email": fields["email"]}
+        document = self.dbconn[USER_TABLE].find_one(filter_)
 
         if document:
             self.logger.error("database.add_user(): email '%s' already exists.", fields['email'])

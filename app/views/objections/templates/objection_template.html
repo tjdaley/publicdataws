@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1>Objection Request</h1>
+    {% from 'includes/_formhelpers.html' import render_field %}
+    <form method='POST'>
+        {% if document._id %}
+        <input type="hidden" name="_id" id="_id" value="{{document._id}}">
+        {% endif %}
+        <div class='form-group'>
+            {{render_field(form.label, class_='form-control', value=document.label)}}
+        </div>
+        <div class='form-group'>
+            {{render_field(form.short_text, class_='form-control', value=document.short_text)}}
+        </div>
+        <div class='form-group'>
+            <!-- NOTE: the 'value' argument does not work as of 11/30/2019 /tjd/ -->
+            {{render_field(form.applies_to, class_='form-control', value=document.applies_to)}}
+        </div>
+        <div class='form-group'>
+            <!-- NOTE: the 'default' argument does not work as of 11/30/2019 /tjd/ -->
+            {{render_field(form.template, class_='form-control', default=document.template)}}
+            <small>HINT: _<i>Italics</i>_&nbsp;&nbsp;__<b>Bold</b>__&nbsp;&nbsp;[[<span style="font-variant: small-caps;">Small Caps</span>]]&nbsp;&nbsp;\\n for a line break</small>
+        </div>
+        <div class='form-group'>
+            {{render_field(form.created_by, class_='form-control', disabled='disabled', value=document.created_by)}}
+        </div>
+        <div class='form-group'>
+            {{render_field(form.updated_by, class_='form-control', disabled='disabled', value=document.updated_by)}}
+        </div>
+        <p><input type='submit' class='btn btn-primary' value='Submit'></p>
+    </form>
+{% endblock %}

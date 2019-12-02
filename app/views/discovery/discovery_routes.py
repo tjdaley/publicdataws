@@ -105,9 +105,9 @@ def discovery_document_edit(id=None):
         success = DATABASE.save_discovery_document(myfields)
         if success:
             flash("{} added.".format(myfields["discovery_type"]), 'success')
-            return redirect(url_for('discovery_list'))
+            return redirect(url_for('discovery_routes.discovery_list'))
         flash("Failed to add case. Check log for explanation.", "danger")
-        return redirect(url_for('discovery_list'))
+        return redirect(url_for('discovery_routes.discovery_list'))
 
     if id:
         fields = {'email': session['email'], 'id': id}

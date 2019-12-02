@@ -4,7 +4,10 @@
     <h1>Document Missing</h1>
     <p>The document you are requesting either never existed or has gone missing.</p>
     {% else %}
-    <h1><a href="/discovery/request/add/{{doc._id}}"><i class="fas fa-plus-circle fa-1x"></i></a>{{doc.discovery_type}}</h1>
+    <h1>
+        <a href="/discovery/request/add/{{doc._id}}"><i class="fas fa-plus-circle fa-1x"></i></a>
+        <span id="discovery_type">{{doc.discovery_type}}</span>
+    </h1>
     <h3>{{doc.county}} COUNTY #{{doc.cause_number}}</h3>
     <div class="row">
         <div class="col-md-12">
@@ -43,25 +46,71 @@
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-5 editable" contenteditable="true" id="request_{{request.number}}">
-                        {{request.request}}
-                    </div>
-                    <div class="col-md-6">
-                        <div class="row justify-content-end">
-                            <button
-                                type="button"
-                                id="del_{{request.number}}"
-                                class="btn btn-danger btn-sm delete_button">X
-                            </button>
+                    <div class="col-md-11">
+                        <div class="row">
+                            <div class="col-md-11">
+                                <div class="editable" contenteditable="true" id="request_{{request.number}}">
+                                    {{request.request}}
+                                </div> 
+                            </div>
+                            <div class="col-md-1">
+                                <button
+                                    type="button"
+                                    id="del_{{request.number}}"
+                                    class="btn btn-danger btn-sm float-right delete_button"
+                                    data-toggle="tooltip"
+                                    data-placement="bottom"
+                                    title="Delete this request.">
+                                    <i class="far fa-trash-alt"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="row">
-                            [[response goes here]]
+                            <div class="col-md-11 bg-secondary text-white">
+                                <div class="editable" contenteditable="true" id="response_{{request.number}}">
+                                    {{request.response}}
+                                </div> 
+                            </div>
+                            <div class="col-md-1">
+                                <button
+                                    type="button"
+                                    id="obj_{{request.number}}"
+                                    class="btn btn-warning btn-sm float-right object_button"
+                                    data-toggle="modal"
+                                    data-target="#ObjectionModal"
+                                    data-placement="bottom"
+                                    data-requestnumber="{{request.number}}"
+                                    title="Raise standard objections.">
+                                    <i class="fas fa-gavel"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </li>
         {% endfor %}
     </ul>
+    <div class="modal fade" id="ObjectionModal" tabindex="1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ObjectionModalTitle">Select Objections</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <span>Which objections pertain to request #</span><span id="objection_request_number">_____</span>?
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="save_objections">Save Objections</button>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <script>
         function hide_save_buttons()
@@ -73,7 +122,13 @@
             }
         }
 
-        function add_save_listeners()
+        function show_save_button(request_number)
+        {
+            let button = document.getElementById('save_' + request_number);
+            button.style.display = 'inline';
+        }
+
+        function add_edit_listeners()
         {
             let editables = document.getElementsByClassName('editable');
             for (let element of editables)
@@ -99,8 +154,11 @@
                     let text_id = 'request_' + target_number;
                     let text_element = document.getElementById(text_id);
                     let text = text_element.innerText;
+                    let response_id = 'response_' + target_number;
+                    let response_element = document.getElementById(response_id);
+                    let response_text = response_element.innerText;
                     let db_id = document.getElementById('_id').value;
-                    controller.saveDiscoveryRequestText(db_id, target_number, text);
+                    controller.saveDiscoveryRequestText(db_id, target_number, text, response_text);
                     event.target.style.display = "none";
                 });
             }
@@ -126,7 +184,6 @@
 
         function add_toggle_listeners()
         {
-            console.log("Initializing toggle buttons.");
             $("#cleaned_button").change(function()
             {
                 let value = $(this).prop('checked') ? 1 : 0;
@@ -136,13 +193,109 @@
             });
         }
 
+        function clear_objections()
+        {
+            $('.objection').prop('checked', 0);
+        }
+
+        function get_selected_objections()
+        {
+            let objections = [];
+            $.each($('.objection' + ':checked'), function(index, element)
+            {
+                objections.push(element.value);
+            });
+
+            return objections;
+        }
+
+        /**
+         * Callback function for controller.getObjectionText()
+         */
+        function append_objections(request_number,objections)
+        {
+            request_elem = $('#response_' + request_number)[0];
+            request_text = request_elem.innerText;
+            var new_text = '';
+
+            $.each(objections, function(index, objection)
+            {
+                new_text += "\tOBJECTION: " + objection.text + "\n";
+            });
+
+            var new_content = new_text + request_text;
+            request_elem.innerText = new_content;
+        }
+
+        function get_objection_text(objections, request_number)
+        {
+            result = controller.getObjectionText(objections, request_number, append_objections);
+            return result;
+        }
+
+        function get_objection_options()
+        {
+            discovery_type = $('#discovery_type').text();
+            result = controller.getObjectionOptions(discovery_type, create_objection_options);
+            return result;
+        }
+
+        function create_objection_options(objections)
+        {
+            /*
+            For each possible objection, create a div like this:
+
+            <div class="form-check">
+                <input class="form-check-input objection" type="checkbox" value="RELEVANCE" id="obj_relevance">
+                <label class="form-check-label" for="obj_relevance">Relevance</label>
+            </div>
+            */
+            $.each(objections, function(idx, objection)
+            {
+                var div = '<div class="form-check">' +
+                    '<input class="form-check-input objection" type="checkbox" value="'+objection.label+'" id="obj_'+objection.label+'">' +
+                    '<label class="form-check-label" for="obj_'+objection.label+'">'+objection.text+'</label>' +
+                    '</div>';
+                $('.modal-body form').append(div);
+            });
+        }
+
+        function save_objections()
+        {
+            $('#save_objections').on('click', function()
+            {
+                let button = event.target;
+                let element = $('#objection_request_number');
+                let request_number = element.text();
+                objections = get_selected_objections();
+                get_objection_text(objections, request_number);
+                $('#ObjectionModal').modal('hide');
+                clear_objections();
+                show_save_button(request_number);
+            });
+        }
+
+        function populate_objection_modal()
+        {
+            $("#ObjectionModal").on('show.bs.modal', function(event)
+            {
+                var button = $(event.relatedTarget);
+                var request_number = button.data('requestnumber');
+                var modal = $(this);
+                modal.find('#objection_request_number').text(request_number);
+            });
+        }
+
         function discovery_requests_init()
         {
             document.addEventListener('DOMContentLoaded', function()
             {
-                add_save_listeners();
+                add_edit_listeners();
                 add_delete_listeners();
                 add_toggle_listeners();
+                populate_objection_modal();
+                save_objections();
+                get_objection_options();
             });
         }
 

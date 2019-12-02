@@ -1,6 +1,75 @@
 'use strict';
 
 var controller = {
+    deleteObjectionTemplate: function(id)
+    {
+        let payload = {
+            id: id,
+        };
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/objection/template/delete',
+                data: payload
+            }
+        )
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+        });
+    },
+
+    getObjectionOptions: function(discovery_type, callback)
+    {
+        var payload = {
+            type: discovery_type
+        }
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/objection/list',
+                data: payload
+            }
+        )
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+            else
+                callback(msg.objections);
+        });
+    },
+
+    getObjectionText: function(objection_labels, request_number, callback)
+    {
+        if (objection_labels.length == 0)
+        {
+            return {'success': true, 'message': 'No objections selected.', objections: {}};
+        }
+
+        var payload = {
+            objections : objection_labels
+        }
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/objection/text',
+                data: payload
+            }
+        )
+        .done(function(msg)
+        {
+            if (msg.success == false)
+                console.log(msg);
+            else
+                callback(request_number, msg.objections);
+        });
+    },
+
     lookupAttorney: function(bar_number, callback)
     {
         if (bar_number.length == 0) return;
@@ -20,12 +89,13 @@ var controller = {
         });
     },
 
-    saveDiscoveryRequestText: function(id, request_number, request_text)
+    saveDiscoveryRequestText: function(id, request_number, request_text, response_text)
     {
         let payload = {
             id: id,
             request_number: request_number,
-            request_text: request_text
+            request_text: request_text,
+            response_text: response_text
         };
 
         $.ajax(
@@ -182,7 +252,8 @@ var app = {
             cause_number: sessionStorage.getItem("cause_number"),
             description: sessionStorage.getItem("case_description"),
             id: sessionStorage.getItem("case_id"),
-        }
+        },
+        discovery_request_number: 0,
     },
     controller: controller,
 };

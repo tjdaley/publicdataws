@@ -16,12 +16,20 @@
             <a class="dropdown-item" href="/search/dl">Driver's License</a>
             <a class="dropdown-item" href="/search/dmv">Motor Vehicles</a>
             {% if session.is_admin %}<a class="dropdown-item" href="/search/rp">Real Property</a>{% endif %}
-            {% if session.is_admin %}<a class="dropdown-item" href="/queries">Cached Queries</a>{% endif %}
           </div>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/discovery/list/all">Discovery</a>
         </li>
+        {% if session.is_admin %}
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="/search" id="dropdown01" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Admin</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown01">
+              <a class="dropdown-item" href="/objection/list">Objection Templates</a>
+              <a class="dropdown-item" href="/queries">Cached Queries</a>
+            </div>
+          </li>
+        {% endif %}
         {% endif %}
         
       </ul>

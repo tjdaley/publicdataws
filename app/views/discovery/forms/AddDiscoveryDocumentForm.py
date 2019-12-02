@@ -16,10 +16,10 @@ class AddDiscoveryDocumentForm(Form):
     court_types_ui = [(i, i) for i in court_types_db]
 
     discovery_types_db = [
-        'Production Requests',
-        'Interrogatories',
-        'Requests for Admission',
-        'Request for Disclosures'
+        'PRODUCTION',
+        'INTERROGATORIES',
+        'ADMISSIONS',
+        'DISCLOSURES'
     ]
     discovery_types_ui = [(i, i) for i in discovery_types_db]
 
