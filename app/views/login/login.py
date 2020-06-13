@@ -39,7 +39,7 @@ def register():
         success = DATABASE.add_user(myfields)
         if success:
             flash("Your registration has been saved--Please login.", 'success')
-            return redirect(url_for('login'))
+            return redirect(url_for('login.do_login'))
 
         flash("{} is already registered.".format(fields["email"]), 'danger')
         return redirect(url_for('login.register'))
@@ -59,7 +59,7 @@ def settings():
     if not result:
         message = "Oddly, {} is not registered as a user.".format(myfields['email'])
         flash(message, "danger")
-        return redirect(url_for("login.logout"))
+        return redirect(url_for("login.do_logout"))
 
     if request.method == 'POST':
         # Email found - do passwords match?
