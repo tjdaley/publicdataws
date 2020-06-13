@@ -138,9 +138,9 @@ class Database(object):
             "result": serialized_result,
             "result_type": result_type,
             "ttl": ttl})
-        filter = {"source": source, "query": query}
+        filter_ = {"source": source, "query": query}
 
-        mongo_result = self.dbconn[CACHE_TABLE_NAME].replace_one(filter, record, upsert=True)
+        mongo_result = self.dbconn[CACHE_TABLE_NAME].replace_one(filter_, record, upsert=True)
         self.logger.debug("mongo_result of replace_one: %s", mongo_result)
         return True
 
@@ -162,8 +162,8 @@ class Database(object):
             (str): If recent entry was found and should be reconstituted as STR.
         """
         utc_now = datetime.utcnow()
-        filter = {"source": source, "query": query, "ttl": {"$gt": utc_now}}
-        document = self.dbconn[CACHE_TABLE_NAME].find_one(filter)
+        filter_ = {"source": source, "query": query, "ttl": {"$gt": utc_now}}
+        document = self.dbconn[CACHE_TABLE_NAME].find_one(filter_)
 
         if not document:
             return None
@@ -261,8 +261,8 @@ class Database(object):
         Returns:
             Deserialized result.
         """
-        filter = {"_id": ObjectId(id)}
-        document = self.dbconn[CACHE_TABLE_NAME].find_one(filter)
+        filter_ = {"_id": ObjectId(id)}
+        document = self.dbconn[CACHE_TABLE_NAME].find_one(filter_)
         if not document:
             return None
 
@@ -322,10 +322,10 @@ class Database(object):
         record['cause_number'] = record['cause_number'].upper()
 
         # Create filter of unique field value combinations
-        filter = {"user_id": record["user_id"], "cause_number": record["cause_number"]}
+        filter_ = {"user_id": record["user_id"], "cause_number": record["cause_number"]}
 
         # Add (upsert) the record
-        mongo_result = self.dbconn[CASE_TABLE].replace_one(filter, record, upsert=True)
+        mongo_result = self.dbconn[CASE_TABLE].replace_one(filter_, record, upsert=True)
         return True
 
     def get_case(self, fields: dict) -> dict:
@@ -347,12 +347,12 @@ class Database(object):
             return {}
 
         # Create lookup filter
-        filter = {}
-        filter['_id'] = ObjectId(fields['_id'])
-        filter['user_id'] = user_id
+        filter_ = {}
+        filter_['_id'] = ObjectId(fields['_id'])
+        filter_['user_id'] = user_id
 
         # Locate matching record
-        document = self.dbconn[CASE_TABLE].find_one(filter)
+        document = self.dbconn[CASE_TABLE].find_one(filter_)
         return document
 
     def get_cases(self, fields: dict) -> dict:
@@ -372,10 +372,10 @@ class Database(object):
             self.logger.error("database.get_cases(): Email not found: '%s'", my_email)
             return {}
 
-        filter = {'user_id': user_id}
+        filter_ = {'user_id': user_id}
 
         # Locate matching records
-        documents = self.dbconn[CASE_TABLE].find(filter)
+        documents = self.dbconn[CASE_TABLE].find(filter_)
         return documents
 
     def update_case(self, fields: dict) -> bool:
@@ -395,7 +395,7 @@ class Database(object):
             return False
 
         # Create lookup filter
-        filter = {
+        filter_ = {
             "user_id": user_id,
             "_id": ObjectId(fields["_id"])}
 
@@ -411,7 +411,7 @@ class Database(object):
         new_vals.update(base_record())
 
         # Locate and update the matching record
-        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set": new_vals}, upsert=False)
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter_, {"$set": new_vals}, upsert=False)
         return mongo_result.modified_count == 1
 
     def del_case(self, fields: dict) -> bool:
@@ -429,12 +429,12 @@ class Database(object):
             return False
 
         # Create lookup filter
-        filter = {
+        filter_ = {
             "user_id": user_id,
             "cause_number": fields["cause_number"].upper()}
 
         # Delete the case, if we can find it.
-        mongo_result = self.dbconn[CASE_TABLE].remove(filter, {"justOne": True})
+        mongo_result = self.dbconn[CASE_TABLE].remove(filter_, {"justOne": True})
         return mongo_result["nRemoved"] == 1
 
     def add_to_case(self, email: str, case_id: str, category: str, key: str, fields: dict) -> bool:
@@ -464,11 +464,11 @@ class Database(object):
 
         # Get make sure this user owns the case.
         my_case_id = ObjectId(case_id)
-        filter = {
+        filter_ = {
             "_id": my_case_id,
             "user_id": user_id
         }
-        case_doc = self.dbconn[CASE_TABLE].find_one(filter)
+        case_doc = self.dbconn[CASE_TABLE].find_one(filter_)
         if not case_doc:
             self.logger.error("database.add_to_case(): Case '%s' not found for '%s'", case_id, email)
             return False
@@ -502,7 +502,7 @@ class Database(object):
         new_vals.update(base_record())
 
         # Locate and update the matching record
-        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set": new_vals}, upsert=False)
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter_, {"$set": new_vals}, upsert=False)
         return mongo_result.modified_count == 1
 
     def del_from_case(self, email: str, case_id: str, category: str, key: str, fields: dict) -> bool:
@@ -530,11 +530,11 @@ class Database(object):
 
         # Get make sure this user owns the case.
         my_case_id = ObjectId(case_id)
-        filter = {
+        filter_ = {
             "_id": my_case_id,
             "user_id": user_id
         }
-        case_doc = self.dbconn[CASE_TABLE].find_one(filter)
+        case_doc = self.dbconn[CASE_TABLE].find_one(filter_)
         if not case_doc:
             self.logger.error("database.del_from_case(): Case '%s' not found for '%s'", case_id, email)
             return False
@@ -570,7 +570,7 @@ class Database(object):
         new_vals.update(base_record())
 
         # Locate and update the matching record
-        mongo_result = self.dbconn[CASE_TABLE].update_one(filter, {"$set": new_vals}, upsert=False)
+        mongo_result = self.dbconn[CASE_TABLE].update_one(filter_, {"$set": new_vals}, upsert=False)
         return mongo_result.modified_count == 1
 
     def get_discovery_list(self, fields: dict) -> list:
@@ -636,13 +636,13 @@ class Database(object):
             return {}
 
         # Create a filter
-        filter = {
+        filter_ = {
             '_id': ObjectId(fields['id']),
             'owner': fields['email'].lower(),
         }
 
         # Locate matching records
-        document = self.dbconn[DISCOVERY_TABLE].find(filter)
+        document = self.dbconn[DISCOVERY_TABLE].find(filter_)
         if document.count() > 0:
             return document[0]
         return None
@@ -656,12 +656,12 @@ class Database(object):
         if 'id' not in fields:
             raise MissingFieldException("'id' must be provided in fields list")
 
-        filter = {
+        filter_ = {
             '_id': ObjectId(fields['id']),
             'owner': fields['email'],
         }
 
-        doc = self.dbconn[DISCOVERY_TABLE].find_one(filter)
+        doc = self.dbconn[DISCOVERY_TABLE].find_one(filter_)
         return doc
 
     def save_discovery_document(self, fields: dict) -> bool:
@@ -675,7 +675,7 @@ class Database(object):
 
         if '_id' in fields:
             # Update
-            filter = {
+            filter_ = {
                 '_id': ObjectId(fields['_id']),
                 'owner': fields['email']
             }
@@ -695,7 +695,7 @@ class Database(object):
             }
 
             mongo_result = self.dbconn[DISCOVERY_TABLE].update_one(
-                filter,
+                filter_,
                 update,
                 upsert=False
             )
@@ -736,7 +736,7 @@ class Database(object):
         if 'value' not in fields:
             raise MissingFieldException("'value' must be provided in fields list")
 
-        filter = {
+        filter_ = {
             '_id': ObjectId(fields['id']),
             'owner': fields['email'],
         }
@@ -745,7 +745,7 @@ class Database(object):
             '$set': {fields['key']: fields['value']}
         }
 
-        self.dbconn[DISCOVERY_TABLE].update(filter, update)
+        self.dbconn[DISCOVERY_TABLE].update(filter_, update)
         return True
 
     def del_discovery_document(self, fields: dict) -> bool:
@@ -757,12 +757,12 @@ class Database(object):
         if 'id' not in fields:
             raise MissingFieldException("'id' must be provided in fields list")
 
-        filter = {
+        filter_ = {
             '_id': ObjectId(fields['id']),
             'owner': fields['email'],
         }
 
-        mongo_result = self.dbconn[DISCOVERY_TABLE].delete_one(filter)
+        mongo_result = self.dbconn[DISCOVERY_TABLE].delete_one(filter_)
         return mongo_result.deleted_count == 1
 
     def save_discovery_request(self, fields: dict) -> bool:
@@ -776,7 +776,7 @@ class Database(object):
         if 'request_text' not in fields:
             raise MissingFieldException("'request_text' must be provided in fields list")
 
-        filter = {
+        filter_ = {
             '_id': ObjectId(fields['id']),
             'owner': fields['email'],
         }
@@ -785,7 +785,7 @@ class Database(object):
             # _id = Unique ID of the discovery document that contains the request.
             # owner = Email address of user who owns the discovery document.
             # requests.number = Index into requests[] contained in discovery document
-            filter['requests.number'] = int(fields['request_number'])
+            filter_['requests.number'] = int(fields['request_number'])
 
             update = {
                 '$set': {
@@ -806,7 +806,7 @@ class Database(object):
                 '$push': {'requests': request}
             }
 
-        self.dbconn[DISCOVERY_TABLE].update(filter, update)
+        self.dbconn[DISCOVERY_TABLE].update(filter_, update)
         return True
 
     def del_discovery_request(self, fields: dict) -> bool:
@@ -820,7 +820,7 @@ class Database(object):
         if 'request_number' not in fields:
             raise MissingFieldException("'email' must be provided in fields list.")
 
-        filter = {
+        filter_ = {
             '_id': ObjectId(fields['id']),
             'owner': fields['email']
         }
@@ -834,7 +834,7 @@ class Database(object):
         }
 
         doc = self.dbconn[DISCOVERY_TABLE].find_one_and_update(
-            filter=filter,
+            filter=filter_,
             update=update,
             return_document=ReturnDocument.AFTER,
         )
@@ -870,11 +870,11 @@ class Database(object):
             return False
 
         # Get make sure this user owns the case.
-        filter = {
+        filter_ = {
             "_id": my_case_id,
             "user_id": user_id
         }
-        case_doc = self.dbconn[CASE_TABLE].find_one(filter)
+        case_doc = self.dbconn[CASE_TABLE].find_one(filter_)
         if not case_doc:
             self.logger.error("database.get_case_items(): Case '%s' not found for '%s'", case_id, email)
             return False
@@ -921,9 +921,9 @@ class Database(object):
         if 'scope' not in fields:
             raise MissingFieldException("'scope' must be provided in fields list.")
         scope = fields['scope']
-        filter = {}
+        filter_ = {}
         if scope != 'all':
-            filter = {
+            filter_ = {
                 'applies_to': scope
             }
         projection = {
@@ -932,7 +932,7 @@ class Database(object):
             'short_text': 1,
             'applies_to': 1,
         }
-        docs = self.dbconn[OBJECTIONS_TABLE].find(filter, projection)
+        docs = self.dbconn[OBJECTIONS_TABLE].find(filter_, projection)
         return docs
 
     def get_objection_template(self, fields: dict) -> dict:
@@ -962,8 +962,8 @@ class Database(object):
         Returns:
             (str): Full text of objection template or None
         """
-        filter = {'label': objection_label}
-        doc = self.dbconn[OBJECTIONS_TABLE].find_one(filter)
+        filter_ = {'label': objection_label}
+        doc = self.dbconn[OBJECTIONS_TABLE].find_one(filter_)
         if doc:
             return doc['template']
         return None
@@ -1036,24 +1036,24 @@ class Database(object):
             self.logger.error("database.add_user(): email '%s' already exists.", fields['email'])
             return False
 
-        mongo_result = self.dbconn[USER_TABLE].replace_one(filter, record, upsert=True)
+        mongo_result = self.dbconn[USER_TABLE].replace_one(filter_, record, upsert=True)
         return True
 
     def get_user(self, fields: dict) -> dict:
         """
         """
-        filter = fields.copy()
-        if "email" in filter:
-            filter["email"] = filter["email"].lower()
+        filter_ = fields.copy()
+        if "email" in filter_:
+            filter_["email"] = filter_["email"].lower()
 
-        document = self.dbconn[USER_TABLE].find_one(filter)
+        document = self.dbconn[USER_TABLE].find_one(filter_)
         return document
 
     def update_user(self, fields: dict) -> dict:
         """
         """
-        filter = {"email": fields['email']}
-        mongo_result = self.dbconn[USER_TABLE].update_one(filter, {"$set": fields}, upsert=False)
+        filter_ = {"email": fields['email']}
+        mongo_result = self.dbconn[USER_TABLE].update_one(filter_, {"$set": fields}, upsert=False)
         return mongo_result.modified_count == 1
 
     # Helper to stringify ObjectId variables so they can be saved in a session.
