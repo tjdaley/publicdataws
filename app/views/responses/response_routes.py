@@ -10,7 +10,7 @@ import random
 
 from views.decorators import is_logged_in, is_case_set, is_admin_user
 from util.database import Database
-from .forms.AddObjectionTemplateForm import AddObjectionTemplateForm
+from .forms.AddResponseTemplateForm import AddResponseTemplateForm
 
 DATABASE = Database()
 DATABASE.connect()
