@@ -108,7 +108,7 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body objection-modal-body">
                     <form>
                         <span>Which objections pertain to request #</span><span id="objection_request_number">_____</span>?
                     </form>
@@ -129,9 +129,9 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body response-modal-body">
                     <form>
-                        <span>How are you responding to request #</span><span id="objection_request_number">_____</span>?
+                        <span>How are you responding to request #</span><span id="response_request_number">_____</span>?
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -302,7 +302,7 @@
                     '<input class="form-check-input objection" type="checkbox" value="'+objection.label+'" id="obj_'+objection.label+'">' +
                     '<label class="form-check-label" for="obj_'+objection.label+'">'+objection.text+'</label>' +
                     '</div>';
-                $('.modal-body form').append(div);
+                $('.objection-modal-body form').append(div);
             });
         }
 
@@ -379,7 +379,7 @@
                     '<input class="form-check-input response" type="checkbox" value="'+response.label+'" id="resp_'+response.label+'">' +
                     '<label class="form-check-label" for="resp_'+response.label+'">'+response.text+'</label>' +
                     '</div>';
-                $('.modal-body form').append(div);
+                $('.response-modal-body form').append(div);
             });
         }
 
@@ -420,6 +420,9 @@
                 populate_objection_modal();
                 save_objections();
                 get_objection_options();
+                populate_response_modal();
+                save_responses();
+                get_response_options();
             });
         }
 
