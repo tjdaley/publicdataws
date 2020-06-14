@@ -1,0 +1,61 @@
+{% extends 'layout.html' %}
+{% block body %}
+    <h1><a href="/objection/template/add"><i class="fas fa-plus-circle fa-1x"></i></a>Response Templates</h1>
+    <ul class="list-group">
+        {% for doc in docs %}
+            <li class="list-group-item" id="{{doc._id}}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="/response/template/edit/{{doc._id}}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        {{doc.label}}
+                    </div>
+                    {% if scope=="all" %}
+                    <div class='col-md-3'>
+                        {{doc.applies_to|join(', ')}}
+                    </div>
+                    {% endif %}
+                    <div class="col-md-5">
+                        {{doc.short_text}}
+                    </div>
+                    <div class="col-md-1">
+                        <button
+                            type="button"
+                            id="del_{{doc._id}}"
+                            class="btn btn-danger btn-sm delete_button">X
+                        </button>
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+    <script>
+        function add_delete_listeners()
+        {
+            let del_buttons = document.getElementsByClassName('delete_button');
+            for (let button of del_buttons)
+            {
+                button.addEventListener('click', function(event)
+                {
+                    let target_name = event.target.id;
+                    let db_id = target_name.split('_')[1];
+                    controller.deleteResponseTemplate(db_id);
+                    let row = document.getElementById(db_id);
+                    row.style.display = "none";
+                });
+            }
+        }
+
+        function init()
+        {
+            document.addEventListener('DOMContentLoaded', function()
+            {
+                add_delete_listeners();
+            });
+        }
+
+        init();
+    </script>
+    
+{% endblock %}

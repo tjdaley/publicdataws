@@ -25,6 +25,7 @@ from views.info.info_routes import info_routes
 from views.login.login import login
 from views.objections.objection_routes import objection_routes
 from views.real_property.real_property_routes import rp_routes
+from views.responses.response_routes import response_routes
 from views.vehicles.vehicle_routes import vehicle_routes
 
 from views.decorators import is_admin_user, is_case_set, is_logged_in
@@ -44,6 +45,7 @@ app.register_blueprint(info_routes)
 app.register_blueprint(login)
 app.register_blueprint(objection_routes)
 app.register_blueprint(rp_routes)
+app.register_blueprint(response_routes)
 app.register_blueprint(vehicle_routes)
 
 

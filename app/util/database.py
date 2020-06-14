@@ -46,6 +46,7 @@ USER_TABLE = 'discoverybot_users'
 CASE_TABLE = 'cases'
 DISCOVERY_TABLE = 'discovery_requests'
 OBJECTIONS_TABLE = 'objection_templates'
+RESPONSES_TABLE = 'response_templates'
 
 
 class MissingFieldException(Exception):
@@ -907,6 +908,9 @@ class Database(object):
 
         return discovery[main_cat]
 
+    #
+    # Objection Templates
+    #
     def get_objection_list(self, fields: dict) -> list:
         """
         Retrieve a list of possible objections for the indicated
@@ -1022,6 +1026,127 @@ class Database(object):
         mongo_result = self.dbconn[OBJECTIONS_TABLE].delete_one(filter_)
         return mongo_result.deleted_count == 1
 
+    #
+    # Response templates
+    #
+    def get_response_list(self, fields: dict) -> list:
+        """
+        Retrieve a list of possible responses for the indicated
+        type of discovery, e.g. Production, Interrogatories, etc.
+
+        Args:
+            scope (str): Type of discovery or 'all'
+        Returns:
+            (list): List of possible discovery responses
+        """
+        # Check for missing fields
+        if 'scope' not in fields:
+            raise MissingFieldException("'scope' must be provided in fields list.")
+        scope = fields['scope']
+        filter_ = {}
+        if scope != 'all':
+            filter_ = {
+                'applies_to': scope
+            }
+        projection = {
+            '_id': 1,
+            'label': 1,
+            'short_text': 1,
+            'applies_to': 1,
+        }
+        docs = self.dbconn[RESPONSES_TABLE].find(filter_, projection)
+        return docs
+
+    def get_response_template(self, fields: dict) -> dict:
+        """
+        Retrieve the specified response template document.
+
+        Args:
+            id (str): ID of document to be retrieved.
+        Returns:
+            (dict): PyMongo document or None
+        """
+        # Check for missing fields
+        if 'id' not in fields:
+            raise MissingFieldException("'id' must be provided in fields list.")
+        _id = fields['id']
+
+        filter_ = {'_id': ObjectId(_id)}
+        doc = self.dbconn[RESPONSES_TABLE].find_one(filter_)
+        return doc
+
+    def get_response_text(self, label: str) -> str:
+        """
+        Retrieve the full text template for a given objection.
+
+        Args:
+            label (str): Index into response_templates collection.
+        Returns:
+            (str): Full text of response template or None
+        """
+        filter_ = {'label': label}
+        doc = self.dbconn[RESPONSES_TABLE].find_one(filter_)
+        if doc:
+            return doc['template']
+        return None
+
+    def save_response_template(self, fields: dict) -> bool:
+        """
+        Save a response template to the database.
+        """
+        if isinstance(fields['applies_to'], list):
+            applies_to = fields['applies_to']
+        else:
+            applies_to = [fields['applies_to']]
+
+        if '_id' in fields:
+            # Update
+            filter_ = {
+                '_id': ObjectId(fields['_id']),
+            }
+
+            update = {
+                '$set': {
+                    'label': fields['label'],
+                    'short_text': fields['short_text'],
+                    'applies_to': applies_to,
+                    'template': fields['template'],
+                    'updated_by': fields['email'],
+                }
+            }
+
+            mongo_result = self.dbconn[RESPONSES_TABLE].update_one(
+                filter_,
+                update,
+                upsert=False
+            )
+
+            return mongo_result.modified_count == 1
+
+        # Insert
+        doc = {
+            'label': fields['label'],
+            'short_text': fields['short_text'],
+            'applies_to': applies_to,
+            'template': fields['template'],
+            'created_by': fields['email'],
+        }
+
+        mongo_result = self.dbconn[RESPONSES_TABLE].insert_one(doc)
+        return mongo_result.inserted_id is not None
+
+    def del_response_template(self, fields: dict) -> bool:
+        """
+        Delete the given response template.
+        """
+        filter_ = {'_id': ObjectId(fields['id'])}
+        self.logger.debug("Delete Resposne Filter: %s", filter_)
+        mongo_result = self.dbconn[RESPONSES_TABLE].delete_one(filter_)
+        return mongo_result.deleted_count == 1
+
+    #
+    # User management
+    #
     def add_user(self, fields: dict) -> bool:
         """
         """

@@ -70,6 +70,68 @@ var controller = {
         });
     },
 
+    deleteResponseTemplate: function (id) {
+        let payload = {
+            id: id,
+        };
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/response/template/delete',
+                data: payload
+            }
+        )
+            .done(function (msg) {
+                if (msg.success == false)
+                    console.log(msg);
+            });
+    },
+
+    getResponseOptions: function (discovery_type, callback) {
+        var payload = {
+            type: discovery_type
+        }
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/response/list',
+                data: payload
+            }
+        )
+            .done(function (msg) {
+                if (msg.success == false)
+                    console.log(msg);
+                else
+                    callback(msg.objections);
+            });
+    },
+
+    getResponseText: function (response_labels, request_number, callback) {
+        if (response_labels.length == 0) {
+            return { 'success': true, 'message': 'No responses selected.', objections: {} };
+        }
+
+        var payload = {
+            objections: response_labels
+        }
+
+        $.ajax(
+            {
+                method: 'POST',
+                url: '/response/text',
+                data: payload
+            }
+        )
+            .done(function (msg) {
+                if (msg.success == false)
+                    console.log(msg);
+                else
+                    callback(request_number, msg.responses);
+            });
+    },
+
     lookupAttorney: function(bar_number, callback)
     {
         if (bar_number.length == 0) return;
