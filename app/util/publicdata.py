@@ -107,7 +107,7 @@ class PublicData(object):
                     self.logger.debug("Loading from cache.")
                     return (True, "OK", response)
 
-            self.logger.debug("Loading from URL.")
+            self.logger.debug("Loading from URL: %s", url)
 
             # Retrieve response from server
             response = requests.get(url, allow_redirects=False)
@@ -586,7 +586,7 @@ class PublicData(object):
 
     def details(self, credentials, db_name: str, record_id: str, edition: str, exemption: str=None, refresh: bool=False)->(bool, str, object):
         (success, msg, keys) = self.login(username=credentials["username"], password=credentials["password"])
-        url = "http://{}/pddetails.php?db={}&rec={}&ed={}&dlnumber={}&id={}&disp=XML" \
+        url = "https://{}/pddetails.php?db={}&rec={}&ed={}&dlnumber={}&id={}&disp=XML" \
               .format(keys["search_server"], db_name, record_id, edition, keys["login_id"], keys["id"])
         if exemption:
             url += "&{}".format(exemption)
@@ -632,7 +632,7 @@ class PublicData(object):
         try:
             normalized_terms = normalize_search_terms(search_terms)
             (success, msg, keys) = self.login(username=credentials["username"], password=credentials["password"])
-            url = "http://{}/pdsearch.php?p1={}&matchany={}&input={}&dlnumber={}&id={}&type={}&asinname={}&disp=XML" \
+            url = "https://{}/pdsearch.php?p1={}&matchany={}&input={}&dlnumber={}&id={}&type={}&asinname={}&disp=XML" \
                   .format(keys["search_server"], normalized_terms, match_type, db_name, keys["login_id"], keys["id"], search_type, match_scope)
             if exemption:
                 url = url + "&" + exemption
@@ -640,11 +640,12 @@ class PublicData(object):
                 url = url + "&searchmoreid=" + searchmoreid
 
             print(url)
+            self.logger.error("URL: %s", url)
 
             # Load XML tree from file or URL
             return self.load_xml(url, refresh=refresh)
         except Exception as e:
-            self.logger.error("Error retrieving from %s: %s")
+            self.logger.error("Error retrieving from %s: %s", url, str(e))
             self.logger.exception(e)
             message = str(e)
 
