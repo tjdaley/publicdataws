@@ -639,8 +639,7 @@ class PublicData(object):
             if searchmoreid:
                 url = url + "&searchmoreid=" + searchmoreid
 
-            print(url)
-            self.logger.error("URL: %s", url)
+            self.logger.debug("URL: %s", url)
 
             # Load XML tree from file or URL
             return self.load_xml(url, refresh=refresh)
