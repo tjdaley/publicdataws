@@ -1,4 +1,4 @@
-﻿Flask==1.0
+Flask==2.3.2
 pymongo==3.5.1
 wtforms>=2.2.1
 passlib>=1.7.1
