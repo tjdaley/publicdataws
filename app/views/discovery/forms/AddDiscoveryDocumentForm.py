@@ -55,7 +55,7 @@ class AddDiscoveryDocumentForm(Form):
     )
     requesting_email = StringField(
         "Requestor's email",
-        [validators.required(), validators.email()]
+        [validators.DataRequired(), validators.email()]
     )
     requesting_name = StringField("Requesting attorney")
     requesting_license_date = StringField("Licensed since")
